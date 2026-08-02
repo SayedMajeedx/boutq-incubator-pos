@@ -8,20 +8,6 @@
     "directory": "dist/client",
     "binding": "ASSETS"
   },
-  "routes": [
-    {
-      "pattern": "*.boutq.store/*",
-      "zone_name": "boutq.store"
-    },
-    {
-      "pattern": "boutq.store",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.boutq.store",
-      "custom_domain": true
-    }
-  ],
   "secrets": {
     "required": [
       "SUPABASE_URL",
