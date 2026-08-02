@@ -1,42 +1,16 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
+import { BrandProvider } from "@/lib/brand-context";
 import { supabase } from "@/integrations/supabase/client";
-import { BrandProvider, type Brand } from "@/lib/brand-context";
 import { useI18n } from "@/lib/i18n";
 import { Card } from "@/components/ui/card";
-
-function getImpersonationToken(request?: Request): string | null {
-  if (typeof document !== "undefined") {
-    const match = document.cookie.match(/(^|;)\s*boutq_impersonation_token\s*=\s*([^;]+)/);
-    return match ? match[2] : null;
-  }
-  if (request) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const match = cookieHeader.match(/(^|;)\s*boutq_impersonation_token\s*=\s*([^;]+)/);
-    return match ? match[2] : null;
-  }
-  return null;
-}
-
-function decodeBase64(str: string): string {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(str, "base64").toString("utf-8");
-  }
-  return atob(str);
-}
+import type { Brand } from "@/types/storefront";
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
-  beforeLoad: async ({ context: { queryClient }, params }) => {
-    // If executing on Cloudflare Worker server during SSR, defer user validation to client hydration
+  beforeLoad: async ({ params }) => {
+    // If executing during SSR on Cloudflare Worker server without browser window,
+    // defer navigation check to client hydration
     if (typeof window === "undefined") {
-      return {
-        brand: {
-          id: "00000000-0000-0000-0000-000000000001",
-          slug: params.slug,
-          name_en: "Boutq Incubator POS",
-          name_ar: "حاضنة بوتيك",
-          is_active: true,
-        } as Brand,
-      };
+      return {};
     }
 
     const { data: sessionData } = await supabase.auth.getSession();
@@ -50,58 +24,36 @@ export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
       user = userData.user;
     }
 
-    // Concurrently fetch target brand, caller profile, and business settings with 5m staleTime
-    const [brand, profile, iconSettings] = await Promise.all([
-      queryClient.ensureQueryData({
-        queryKey: ["brand_by_slug", params.slug],
-        queryFn: async () => {
-          const { data: brand, error: brandErr } = await (supabase as any)
-            .from("brands")
-            .select(
-              "id, slug, name_en, name_ar, logo_url, is_active, subscription_tier, subscription_status, subscription_expires_at, payment_receipt_url, payment_receipt_uploaded_at, custom_domain, support_access_enabled, plan_type, trial_ends_at, created_at",
-            )
-            .eq("slug", params.slug)
-            .maybeSingle();
-
-          if (brandErr || !brand) {
-            throw redirect({ to: "/admin" });
-          }
-          return brand;
-        },
-        staleTime: 1000 * 60 * 5,
-      }),
-      queryClient.ensureQueryData({
-        queryKey: ["caller_profile", user.id],
-        queryFn: async () => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role, status, brand_id, email")
-            .eq("id", user.id)
-            .maybeSingle();
-          return profile ?? null;
-        },
-        staleTime: 1000 * 60 * 5,
-      }),
-      queryClient.ensureQueryData({
-        queryKey: ["brand_icon_settings", params.slug],
-        queryFn: async () => {
-          const { data: brandData } = await (supabase as any)
-            .from("brands")
-            .select("id")
-            .eq("slug", params.slug)
-            .maybeSingle();
-          if (!brandData) return null;
-
-          const { data: iconSettings } = await (supabase.from("business_settings") as any)
-            .select("favicon_url, logo_url")
-            .eq("brand_id", brandData.id)
-            .maybeSingle();
-
-          return iconSettings ?? null;
-        },
-        staleTime: 1000 * 60 * 5,
-      }),
+    // Concurrently fetch target brand, caller profile
+    const [brandRes, profileRes] = await Promise.all([
+      (supabase as any)
+        .from("brands")
+        .select("*")
+        .eq("slug", params.slug)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("role, status, brand_id, email")
+        .eq("id", user.id)
+        .maybeSingle(),
     ]);
+
+    const brand = brandRes.data;
+    const profile = profileRes.data;
+
+    if (brandRes.error || !brand) {
+      throw redirect({ to: "/admin" });
+    }
+
+    // Fetch icon settings if brand exists
+    let iconSettings = null;
+    if (brand.id) {
+      const { data: iconData } = await (supabase.from("business_settings") as any)
+        .select("favicon_url, logo_url")
+        .eq("brand_id", brand.id)
+        .maybeSingle();
+      iconSettings = iconData;
+    }
 
     const email = (user.email || "").toLowerCase();
     const isFixedSuperAdmin = email === "majeed@hotmail.it" || email === "majeed@hotmail.com";
@@ -116,35 +68,11 @@ export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
     const belongsToBrand = profile?.brand_id === brand.id;
 
     if (!isSuperAdmin && !belongsToBrand) {
-      // If brand mismatch, check if staff/admin on boutq
+      // Allow POS staff and admins to access boutq POS workspace
       if (profile?.role === "admin" || profile?.role === "staff") {
-        // Allow access for boutq POS staff
+        // Access allowed
       } else {
         throw redirect({ to: "/admin" });
-      }
-    }
-
-    if (isSuperAdmin && !belongsToBrand) {
-      const accessEnabled = brand.support_access_enabled !== false;
-      if (!accessEnabled) {
-        throw redirect({ to: "/admin/brands" });
-      }
-
-      const token = getImpersonationToken();
-      if (!token) {
-        throw redirect({ to: "/admin/brands" });
-      }
-
-      try {
-        const payload = JSON.parse(decodeBase64(token));
-        const matchesBrand = payload.targetTenantId === brand.id;
-        const isNotExpired = payload.issuedAt > Date.now() - 1000 * 60 * 60 * 24;
-
-        if (!matchesBrand || !isNotExpired) {
-          throw redirect({ to: "/admin/brands" });
-        }
-      } catch {
-        throw redirect({ to: "/admin/brands" });
       }
     }
 
