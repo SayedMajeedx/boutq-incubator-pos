@@ -2,52 +2,52 @@ import { useEffect, useRef } from "react";
 
 interface BarcodeScannerOptions {
   onScan: (barcode: string) => void;
-  maxIntervalMs?: number; // Max time between keystrokes (default 35ms)
-  minLength?: number;    // Minimum barcode length (default 3)
+  maxIntervalMs?: number; // Max time between keystrokes (default 80ms to support manual typing too)
+  minLength?: number;    // Minimum barcode length (default 2)
 }
 
 /**
- * Global Web Keydown Listener for Bluetooth / USB HID Barcode Scanners.
- * Intercepts rapid physical keystrokes without requiring focus on a input field.
+ * Global Web Keydown Listener for Physical Barcode Scanners & Keyboard Testing.
+ * Intercepts rapid physical barcode scanner keystrokes or keyboard entry ending with Enter.
  */
 export function useBarcodeScanner({
   onScan,
-  maxIntervalMs = 35,
-  minLength = 3,
+  maxIntervalMs = 80,
+  minLength = 2,
 }: BarcodeScannerOptions) {
   const bufferRef = useRef<string>("");
   const lastKeyTimeRef = useRef<number>(0);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      // Ignore if active element is a text input / textarea where typing is intentional
       const target = event.target as HTMLElement | null;
-      if (
+      
+      // If typing inside a standard search input, only capture if Enter is pressed with a valid buffer
+      const isInput =
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        // If target is normal input, do not capture unless scanner sends rapid sequence
-        const timeDiff = performance.now() - lastKeyTimeRef.current;
-        if (timeDiff > maxIntervalMs && bufferRef.current.length === 0) {
-          return;
-        }
-      }
+          target.isContentEditable);
 
       const key = event.key;
       const now = performance.now();
       const timeSinceLastKey = now - lastKeyTimeRef.current;
       lastKeyTimeRef.current = now;
 
-      // Enter key indicates end of scanned barcode
+      // Enter key triggers scan evaluation
       if (key === "Enter") {
         if (bufferRef.current.length >= minLength) {
           const barcode = bufferRef.current.trim();
           bufferRef.current = "";
+          console.log(
+            `%c[HARDWARE] Barcode Triggered via Keyboard/Scanner: ${barcode}`,
+            "color: #00e5ff; font-weight: bold; background: #002233; padding: 4px 8px; border-radius: 4px;"
+          );
           playScanBeep();
           onScan(barcode);
-          event.preventDefault();
+          if (!isInput) {
+            event.preventDefault();
+          }
         } else {
           bufferRef.current = "";
         }
@@ -55,9 +55,9 @@ export function useBarcodeScanner({
       }
 
       // Capture single printable characters
-      if (key.length === 1) {
+      if (key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
         if (timeSinceLastKey > maxIntervalMs && bufferRef.current.length > 0) {
-          // Time gap too long -> reset buffer for human typing
+          // Reset buffer if idle too long
           bufferRef.current = "";
         }
         bufferRef.current += key;
@@ -72,7 +72,7 @@ export function useBarcodeScanner({
 }
 
 /**
- * Synthesizes an audio beep feedback when a barcode is successfully scanned.
+ * Synthesizes an audio beep feedback when a barcode is successfully scanned or tested.
  */
 export function playScanBeep() {
   try {
@@ -94,6 +94,6 @@ export function playScanBeep() {
     osc.start();
     osc.stop(ctx.currentTime + 0.08);
   } catch (e) {
-    console.warn("Audio Context beep error:", e);
+    console.warn("[Hardware] Audio Context beep warning:", e);
   }
 }

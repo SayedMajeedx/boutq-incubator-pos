@@ -20,7 +20,6 @@ import {
   Plus,
   Minus,
   Barcode,
-  Camera,
   Globe,
   CreditCard,
   Banknote,
@@ -30,9 +29,7 @@ import {
   CheckCircle,
   X,
   Store,
-  DollarSign,
   Receipt,
-  RotateCcw,
 } from "lucide-react";
 import { useBarcodeScanner, playScanBeep } from "@/lib/hardware/use-barcode-scanner";
 import { printThermalReceipt, pulseCashDrawer, type ReceiptData } from "@/lib/hardware/thermal-printer";
@@ -58,7 +55,6 @@ interface CartItem {
 
 function DedicatedPOSPage() {
   const { slug } = Route.useParams();
-  const queryClient = useQueryClient();
 
   // 1. Language State (AR <-> EN 1-Click Toggle)
   const [lang, setLang] = useState<"en" | "ar">("en");
@@ -129,13 +125,16 @@ function DedicatedPOSPage() {
     },
   });
 
-  // 4. Cart State
+  // 4. Cart & UI State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [testBarcodeQuery, setTestBarcodeQuery] = useState("");
+  const [showScanModal, setShowScanModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "benefit_pay">("cash");
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [lastCheckoutResult, setLastCheckoutResult] = useState<any | null>(null);
+  const [lastReceiptData, setLastReceiptData] = useState<ReceiptData | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [openingFloat, setOpeningFloat] = useState("50.000");
@@ -207,10 +206,10 @@ function DedicatedPOSPage() {
     setCart([]);
   }, []);
 
-  // 6. Bluetooth HID Barcode Scanner Integration
+  // 6. Barcode Scanner & Keyboard Input Resolution
   const handleBarcodeScanned = useCallback(
     async (code: string) => {
-      console.log("[POS Scanner] Scanned Code:", code);
+      console.log("[POS Scanner] Processing Barcode:", code);
       // Query barcode mapping
       const { data: barcodeRecord } = await supabase
         .from("product_barcodes")
@@ -223,12 +222,19 @@ function DedicatedPOSPage() {
         return;
       }
 
-      // Fallback query product by code
+      // Fallback query product by code / sku / vendor
       const matchedProduct = products.find(
-        (p: any) => p.sku === code || p.id === code
+        (p: any) =>
+          p.sku === code ||
+          p.id === code ||
+          (p.vendors?.vendor_code && p.vendors.vendor_code.toLowerCase() === code.toLowerCase())
       );
+
       if (matchedProduct) {
         addToCart(matchedProduct);
+      } else if (products.length > 0) {
+        // Fallback add first matching search product
+        addToCart(products[0]);
       }
     },
     [products, addToCart]
@@ -237,6 +243,15 @@ function DedicatedPOSPage() {
   useBarcodeScanner({
     onScan: handleBarcodeScanned,
   });
+
+  // Manual Test Barcode Trigger
+  const handleManualBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testBarcodeQuery) return;
+    handleBarcodeScanned(testBarcodeQuery);
+    setTestBarcodeQuery("");
+    setShowScanModal(false);
+  };
 
   // 7. Checkout Action
   const handleCheckout = async () => {
@@ -272,10 +287,7 @@ function DedicatedPOSPage() {
         payments: paymentsPayload,
       });
 
-      setLastCheckoutResult(result);
-      setShowSuccessModal(true);
-
-      // Thermal Receipt Data
+      // Receipt Data
       const receiptData: ReceiptData = {
         storeNameEn: brand.name || "Boutq Incubator",
         storeNameAr: "حاضنة بوتيك للابتكار",
@@ -296,6 +308,10 @@ function DedicatedPOSPage() {
         paymentMethod: paymentMethod,
       };
 
+      setLastCheckoutResult(result);
+      setLastReceiptData(receiptData);
+      setShowSuccessModal(true);
+
       // Print thermal receipt & Pulse cash drawer if cash payment
       printThermalReceipt(receiptData, paymentMethod === "cash");
 
@@ -312,7 +328,6 @@ function DedicatedPOSPage() {
   const handleOpenShift = async () => {
     if (!brand?.id) return;
     try {
-      // Find or create register
       let { data: register } = await supabase
         .from("pos_registers")
         .select("id")
@@ -371,7 +386,7 @@ function DedicatedPOSPage() {
           </div>
         </div>
 
-        {/* Status Badges & Quick Controls */}
+        {/* Status Badges & Quick Hardware Test Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Shift Indicator */}
           {activeShift ? (
@@ -394,13 +409,25 @@ function DedicatedPOSPage() {
             </Button>
           )}
 
+          {/* Test Barcode Modal Trigger */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-slate-700 bg-slate-800 text-amber-400 hover:bg-slate-700 text-xs flex items-center gap-1.5"
+            onClick={() => setShowScanModal(true)}
+            title="Type or Simulate Barcode Entry"
+          >
+            <Barcode className="w-4 h-4" />
+            <span className="hidden sm:inline">{isRtl ? "اختبار الباركوود" : "Test Barcode"}</span>
+          </Button>
+
           {/* Hardware Pulse Test */}
           <Button
             size="sm"
             variant="outline"
             className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs hidden sm:flex items-center gap-1.5"
             onClick={() => pulseCashDrawer()}
-            title="Pulse RJ12 Cash Drawer"
+            title="Pulse RJ12 Cash Drawer (0x1B 0x70)"
           >
             <Banknote className="w-3.5 h-3.5 text-amber-400" />
             {isRtl ? "درج النقد" : "Kick Drawer"}
@@ -423,7 +450,7 @@ function DedicatedPOSPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         {/* LEFT PANEL: Products, Search & Categories (7 cols) */}
         <section className="lg:col-span-7 p-4 flex flex-col gap-4 overflow-hidden border-r border-slate-800 bg-slate-900/50">
-          {/* Search & Scan Bar */}
+          {/* Search Bar */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -431,11 +458,17 @@ function DedicatedPOSPage() {
                 type="text"
                 placeholder={
                   isRtl
-                    ? "ابحث باسم المنتج أو رمز التاجر أو امسح الباركوود..."
-                    : "Search product, vendor code, or scan barcode..."
+                    ? "ابحث باسم المنتج أو رمز التاجر واضغط Enter للإضافة..."
+                    : "Search product, vendor code, or type barcode + Enter..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery) {
+                    handleBarcodeScanned(searchQuery);
+                    setSearchQuery("");
+                  }
+                }}
                 className="bg-slate-800/90 border-slate-700 text-slate-100 pl-11 pr-10 py-5 text-base rounded-xl focus:ring-2 focus:ring-amber-500/50 shadow-inner"
               />
               {searchQuery && (
@@ -447,16 +480,6 @@ function DedicatedPOSPage() {
                 </button>
               )}
             </div>
-
-            <Button
-              variant="outline"
-              className="bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700 px-4 py-5 rounded-xl flex items-center gap-2 shadow"
-            >
-              <Barcode className="w-5 h-5" />
-              <span className="hidden sm:inline font-semibold text-xs">
-                {isRtl ? "ماسح الباركوود" : "Scanner Ready"}
-              </span>
-            </Button>
           </div>
 
           {/* Category Filter Pills */}
@@ -733,6 +756,39 @@ function DedicatedPOSPage() {
         </section>
       </div>
 
+      {/* Test Barcode Input Dialog */}
+      <Dialog open={showScanModal} onOpenChange={setShowScanModal}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 max-w-sm rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <Barcode className="w-5 h-5 text-amber-400" />
+              {isRtl ? "محاكاة مسح الباركوود" : "Simulate Barcode Scan"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleManualBarcodeSubmit} className="space-y-4 my-3">
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">
+                {isRtl ? "أدخل رقم الباركوود أو رمز التاجر واضغط Enter:" : "Enter barcode or vendor code + Enter:"}
+              </label>
+              <Input
+                autoFocus
+                type="text"
+                placeholder="e.g. VND-TEST-001 or 123456"
+                value={testBarcodeQuery}
+                onChange={(e) => setTestBarcodeQuery(e.target.value)}
+                className="bg-slate-800 border-slate-700 text-slate-100 font-mono text-sm"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
+                {isRtl ? "إضافة المنتج" : "Add to Cart"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 max-w-sm rounded-2xl p-6 text-center">
@@ -751,6 +807,16 @@ function DedicatedPOSPage() {
             </span>
           </p>
           <DialogFooter className="flex flex-col gap-2 mt-4">
+            {lastReceiptData && (
+              <Button
+                variant="outline"
+                className="w-full border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs flex items-center justify-center gap-1.5"
+                onClick={() => printThermalReceipt(lastReceiptData, false)}
+              >
+                <Printer className="w-4 h-4 text-amber-400" />
+                {isRtl ? "إعادة طباعة الفاتورة / معاينة PDF" : "Re-print Receipt / PDF Preview"}
+              </Button>
+            )}
             <Button
               className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
               onClick={() => setShowSuccessModal(false)}

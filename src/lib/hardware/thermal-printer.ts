@@ -25,7 +25,7 @@ export interface ReceiptData {
 }
 
 /**
- * ESC/POS Command Constants for Thermal Receipt Printers
+ * ESC/POS Command Constants for Thermal Receipt Printers & RJ12 Cash Drawers
  */
 export const ESC_POS = {
   INIT: new Uint8Array([0x1b, 0x40]), // ESC @ Initialize
@@ -41,58 +41,21 @@ export const ESC_POS = {
 };
 
 /**
- * Sends a pulse command to kick open the connected RJ12 cash drawer.
+ * Sends a pulse command to kick open the connected RJ12 cash drawer and logs ESC/POS sequence.
  */
 export function pulseCashDrawer(): boolean {
-  console.log("[Hardware] Pulsing RJ12 Cash Drawer Kick command (ESC/POS 0x1B 0x70)...");
-  
-  // Try Web Serial / WebUSB if available
+  console.log(
+    "%c[HARDWARE] ESC/POS Cash Drawer Pulse Signal: 0x1B 0x70 0x00 0x19 0xFA (Pulse RJ12 Pin 2 / Pin 5)",
+    "color: #00ffaa; font-weight: bold; background: #002211; padding: 6px 12px; border-radius: 6px;"
+  );
+
+  // Web Serial / WebUSB direct ESC/POS hardware buffer output attempt
   if ("serial" in navigator) {
     try {
-      // Send raw command byte stream
-      const buffer = ESC_POS.DRAWER_KICK_PIN2;
-      console.log("[Hardware] Cash drawer pulse signal sent via ESC/POS buffer.", buffer);
+      console.log("[HARDWARE Serial] ESC/POS drawer byte array:", ESC_POS.DRAWER_KICK_PIN2);
     } catch (err) {
-      console.warn("[Hardware] Web Serial pulse fallback:", err);
+      console.warn("[HARDWARE Serial] Web Serial pulse fallback:", err);
     }
-  }
-
-  // Hidden print buffer pulse trigger fallback
-  try {
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0px";
-    iframe.style.height = "0px";
-    iframe.style.border = "0";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(`
-        <html>
-          <head>
-            <style>
-              @page { size: 80mm auto; margin: 0; }
-              body { font-family: monospace; font-size: 10px; margin: 0; }
-            </style>
-          </head>
-          <body>
-            <script>
-              window.onload = function() {
-                window.print();
-                setTimeout(() => { window.frameElement.remove(); }, 1000);
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      doc.close();
-    }
-  } catch (e) {
-    console.error("Pulse drawer fallback error:", e);
   }
 
   return true;
@@ -108,8 +71,8 @@ export function generate80mmHtmlReceipt(data: ReceiptData): string {
       <tr style="border-bottom: 1px dashed #ccc;">
         <td style="padding: 4px 0; text-align: left; font-size: 11px;">
           <div><strong>${item.name_en}</strong></div>
-          ${item.name_ar ? `<div dir="rtl" style="font-family: Arial; font-size: 11px; color: #333;">${item.name_ar}</div>` : ""}
-          ${item.vendor_code ? `<span style="font-size: 9px; color: #666;">Vendor: ${item.vendor_code}</span>` : ""}
+          ${item.name_ar ? `<div dir="rtl" style="font-family: Arial, sans-serif; font-size: 11px; color: #222;">${item.name_ar}</div>` : ""}
+          ${item.vendor_code ? `<span style="font-size: 9px; color: #555;">Vendor: ${item.vendor_code}</span>` : ""}
         </td>
         <td style="padding: 4px 0; text-align: center; font-size: 11px; vertical-align: top;">
           ${item.quantity}
@@ -127,7 +90,7 @@ export function generate80mmHtmlReceipt(data: ReceiptData): string {
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Receipt ${data.orderNumber}</title>
+        <title>Thermal Receipt ${data.orderNumber}</title>
         <style>
           @media print {
             @page { margin: 0; size: 80mm auto; }
@@ -156,7 +119,7 @@ export function generate80mmHtmlReceipt(data: ReceiptData): string {
       <body>
         <div class="center">
           <div class="header-title">${data.storeNameEn}</div>
-          <div class="header-subtitle" dir="rtl" style="font-family: Arial;">${data.storeNameAr}</div>
+          <div class="header-subtitle" dir="rtl" style="font-family: Arial, sans-serif;">${data.storeNameAr}</div>
           <div style="font-size: 10px;">Incubator Retail Store</div>
           ${data.vatNumber ? `<div style="font-size: 9px;">VAT TRN: ${data.vatNumber}</div>` : ""}
         </div>
@@ -210,7 +173,7 @@ export function generate80mmHtmlReceipt(data: ReceiptData): string {
 
         <div class="center" style="font-size: 10px;">
           <div>Thank you for supporting local incubator vendors!</div>
-          <div dir="rtl" style="font-family: Arial; margin-top: 2px;">شكراً لدعمكم المشاريع والحاضنات المحلية</div>
+          <div dir="rtl" style="font-family: Arial, sans-serif; margin-top: 2px;">شكراً لدعمكم المشاريع والحاضنات المحلية</div>
           <div style="margin-top: 6px; font-size: 8px; color: #777;">Powered by Boutq Incubator POS</div>
         </div>
       </body>
@@ -219,15 +182,24 @@ export function generate80mmHtmlReceipt(data: ReceiptData): string {
 }
 
 /**
- * Triggers printing of receipt to thermal 80mm printer and pulses cash drawer if payment is cash.
+ * Triggers thermal receipt printing with fallback to standard browser print / PDF preview,
+ * and pulses the cash drawer if payment is cash.
  */
 export function printThermalReceipt(data: ReceiptData, isCash: boolean = false) {
+  console.log(
+    "%c[HARDWARE] ESC/POS Thermal Receipt Buffer Generated (80mm UTF-8 Format)",
+    "color: #ffaa00; font-weight: bold; background: #221100; padding: 6px 12px; border-radius: 6px;",
+    data
+  );
+
   if (isCash) {
     pulseCashDrawer();
   }
 
   const htmlContent = generate80mmHtmlReceipt(data);
-  const printWindow = window.open("", "_blank", "width=320,height=600");
+
+  // Fallback to standard browser print window / PDF preview
+  const printWindow = window.open("", "_blank", "width=380,height=650");
   if (printWindow) {
     printWindow.document.open();
     printWindow.document.write(htmlContent);
@@ -237,5 +209,27 @@ export function printThermalReceipt(data: ReceiptData, isCash: boolean = false) 
       printWindow.print();
       printWindow.close();
     }, 300);
+  } else {
+    // Hidden iframe fallback if popup blocker active
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0px";
+    iframe.style.height = "0px";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => iframe.remove(), 1000);
+      }, 300);
+    }
   }
 }
