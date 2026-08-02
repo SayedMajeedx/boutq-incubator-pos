@@ -73,7 +73,7 @@ function createSupabaseClient() {
   const SUPABASE_URL = resolveSupabaseUrl();
   const SUPABASE_PUBLISHABLE_KEY = resolveSupabasePublishableKey();
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
@@ -89,6 +89,23 @@ function createSupabaseClient() {
       },
     },
   });
+
+  // Sync auth state to document cookie for persistent sessions
+  if (typeof window !== "undefined") {
+    client.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token) {
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+        if (session.refresh_token) {
+          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+        }
+      } else if (event === "SIGNED_OUT") {
+        document.cookie = `sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure`;
+        document.cookie = `sb-refresh-token=; path=/; max-age=0; SameSite=Lax; Secure`;
+      }
+    });
+  }
+
+  return client;
 }
 
 function createPublicSupabaseClient() {

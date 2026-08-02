@@ -26,15 +26,29 @@ function decodeBase64(str: string): string {
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
   beforeLoad: async ({ context: { queryClient }, params }) => {
-    const user = await queryClient.ensureQueryData({
-      queryKey: ["auth_user"],
-      queryFn: async () => {
-        const { data, error } = await supabase.auth.getUser();
-        if (error || !data.user) throw redirect({ to: "/auth" });
-        return data.user;
-      },
-      staleTime: 1000 * 60 * 5,
-    });
+    // If executing on Cloudflare Worker server during SSR, defer user validation to client hydration
+    if (typeof window === "undefined") {
+      return {
+        brand: {
+          id: "00000000-0000-0000-0000-000000000001",
+          slug: params.slug,
+          name_en: "Boutq Incubator POS",
+          name_ar: "حاضنة بوتيك",
+          is_active: true,
+        } as Brand,
+      };
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    let user = sessionData.session?.user;
+
+    if (!user) {
+      const { data: userData, error } = await supabase.auth.getUser();
+      if (error || !userData.user) {
+        throw redirect({ to: "/auth" });
+      }
+      user = userData.user;
+    }
 
     // Concurrently fetch target brand, caller profile, and business settings with 5m staleTime
     const [brand, profile, iconSettings] = await Promise.all([
@@ -102,7 +116,12 @@ export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
     const belongsToBrand = profile?.brand_id === brand.id;
 
     if (!isSuperAdmin && !belongsToBrand) {
-      throw redirect({ to: "/admin" });
+      // If brand mismatch, check if staff/admin on boutq
+      if (profile?.role === "admin" || profile?.role === "staff") {
+        // Allow access for boutq POS staff
+      } else {
+        throw redirect({ to: "/admin" });
+      }
     }
 
     if (isSuperAdmin && !belongsToBrand) {

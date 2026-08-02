@@ -6,15 +6,22 @@ import { RoutePendingSkeleton } from "@/components/os/route-pending-skeleton";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ context: { queryClient } }) => {
-    const user = await queryClient.ensureQueryData({
-      queryKey: ["auth_user"],
-      queryFn: async () => {
-        const { data, error } = await supabase.auth.getUser();
-        if (error || !data.user) throw redirect({ to: "/auth" });
-        return data.user;
-      },
-      staleTime: 1000 * 60 * 5, // 5 min cache
-    });
+    // If executing during SSR on Cloudflare Worker server without browser window,
+    // defer auth check to client hydration to avoid premature redirection.
+    if (typeof window === "undefined") {
+      return {};
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    let user = sessionData.session?.user;
+
+    if (!user) {
+      const { data: userData, error } = await supabase.auth.getUser();
+      if (error || !userData.user) {
+        throw redirect({ to: "/auth" });
+      }
+      user = userData.user;
+    }
 
     const profile = await queryClient.ensureQueryData({
       queryKey: ["auth_profile_role", user.id],
