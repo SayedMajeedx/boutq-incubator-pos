@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { RoutePendingSkeleton } from "@/components/os/route-pending-skeleton";
+import { getAuthenticatedUser } from "@/lib/authenticated-user";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -12,15 +13,14 @@ export const Route = createFileRoute("/_authenticated")({
       return {};
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    let user = sessionData.session?.user;
-
+    // Validate the user with Supabase instead of reading the local session here.
+    // getSession() can wait indefinitely on the browser auth lock immediately
+    // after signInWithPassword(), leaving every protected route on its pending
+    // skeleton. getUser() performs the authoritative check without that
+    // post-login transition deadlock.
+    const user = await getAuthenticatedUser();
     if (!user) {
-      const { data: userData, error } = await supabase.auth.getUser();
-      if (error || !userData.user) {
-        throw redirect({ to: "/auth" });
-      }
-      user = userData.user;
+      throw redirect({ to: "/auth" });
     }
 
     const profile = await queryClient.ensureQueryData({

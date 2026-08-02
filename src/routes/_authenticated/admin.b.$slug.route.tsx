@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Card } from "@/components/ui/card";
 import type { Brand } from "@/types/storefront";
+import { getAuthenticatedUser } from "@/lib/authenticated-user";
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
   beforeLoad: async ({ params }) => {
@@ -13,15 +14,9 @@ export const Route = createFileRoute("/_authenticated/admin/b/$slug")({
       return {};
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    let user = sessionData.session?.user;
-
+    const user = await getAuthenticatedUser();
     if (!user) {
-      const { data: userData, error } = await supabase.auth.getUser();
-      if (error || !userData.user) {
-        throw redirect({ to: "/auth" });
-      }
-      user = userData.user;
+      throw redirect({ to: "/auth" });
     }
 
     // Concurrently fetch target brand, caller profile

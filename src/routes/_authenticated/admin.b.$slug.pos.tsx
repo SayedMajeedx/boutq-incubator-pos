@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -363,16 +363,21 @@ function DedicatedPOSPage() {
 
   return (
     <div
-      className={`min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none ${
+      className={`fixed inset-0 z-50 w-screen h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none overflow-hidden ${
         isRtl ? "rtl" : "ltr"
       }`}
     >
       {/* Top Touch Navigation Bar */}
       <header className="bg-slate-800/90 border-b border-slate-700/80 px-4 py-3 flex items-center justify-between shadow-lg backdrop-blur sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md">
+          <Link
+            to="/admin/b/$slug/dashboard"
+            params={{ slug }}
+            className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+            title={isRtl ? "العودة للوحة التحكم" : "Exit POS to Admin Dashboard"}
+          >
             <Store className="w-6 h-6 text-slate-950" />
-          </div>
+          </Link>
           <div>
             <h1 className="font-bold text-lg leading-tight flex items-center gap-2">
               {brand?.name || "Boutq Incubator"}

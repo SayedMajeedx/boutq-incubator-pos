@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthenticatedUser } from "@/lib/authenticated-user";
 
 /**
  * /admin smart redirector.
@@ -16,13 +17,7 @@ export const Route = createFileRoute("/_authenticated/admin/")({
       return {};
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    let user = sessionData.session?.user;
-
-    if (!user) {
-      const { data: userData } = await supabase.auth.getUser();
-      user = userData.user ?? null;
-    }
+    const user = await getAuthenticatedUser();
 
     if (!user) {
       throw redirect({ to: "/auth" });

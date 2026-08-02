@@ -45,11 +45,25 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 function withPerformanceCacheHeaders(request: Request, response: Response): Response {
   const url = new URL(request.url);
+  const headers = new Headers(response.headers);
+
+  // Force HTML/SSR documents to always revalidate so deployments update instantly
+  const contentType = headers.get("content-type") ?? "";
+  if (contentType.includes("text/html")) {
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+    headers.set("Pragma", "no-cache");
+    headers.set("Expires", "0");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
   if (
     response.status === 200 &&
     (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/"))
   ) {
-    const headers = new Headers(response.headers);
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
     return new Response(response.body, {
       status: response.status,
