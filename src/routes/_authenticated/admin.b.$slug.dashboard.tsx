@@ -171,6 +171,31 @@ function Dashboard() {
     },
   });
 
+  // 8. Fetch Incubator Vendors & Ledger
+  const vendorsQ = useQuery({
+    queryKey: ["dashboard-vendors", brandId],
+    queryFn: async () => {
+      const { data } = await supabase.from("vendors").select("*").eq("brand_id", brandId);
+      return data ?? [];
+    },
+  });
+
+  const ledgerQ = useQuery({
+    queryKey: ["dashboard-ledger", brandId],
+    queryFn: async () => {
+      const { data } = await supabase.from("vendor_ledger_entries").select("*").eq("brand_id", brandId);
+      return data ?? [];
+    },
+  });
+
+  const contractsQ = useQuery({
+    queryKey: ["dashboard-contracts", brandId],
+    queryFn: async () => {
+      const { data } = await supabase.from("vendor_contracts").select("*");
+      return data ?? [];
+    },
+  });
+
   useRealtimeInvalidate(
     [
       { table: "orders", brandId, queryKey: ["dashboard-orders-with-items", brandId] },
@@ -536,8 +561,32 @@ function Dashboard() {
     );
   }
 
-  // Primary Financial KPIs
+  // Primary Financial & Incubator KPIs
+  const totalCommissionEarned = (ledgerQ.data ?? [])
+    .filter((e) => e.type === "commission_deduction")
+    .reduce((sum, e) => sum + Math.abs(Number(e.amount || 0)), 0);
+
+  const activeContractsCount = (contractsQ.data ?? []).filter((c) => c.status === "active").length;
+
   const primaryKpis = [
+    {
+      label: isAr ? "البائعون بالحاضنة" : "Incubator Vendors",
+      value: (vendorsQ.data ?? []).length.toString(),
+      subValue: `${isAr ? "نشط" : "Active"}: ${(vendorsQ.data ?? []).filter((v) => v.status === "active").length}`,
+      icon: Users,
+      color: "text-amber-500",
+      bg: "from-amber-500/10 via-transparent to-transparent",
+      border: "hover:border-amber-500/20",
+    },
+    {
+      label: isAr ? "عمولة الحاضنة المقتطعة" : "Incubator Commissions",
+      value: formatMoney(totalCommissionEarned, currency, locale),
+      subValue: `${isAr ? "عقود الإيجار النشطة" : "Active Leases"}: ${activeContractsCount}`,
+      icon: TrendingUp,
+      color: "text-emerald-500",
+      bg: "from-emerald-500/10 via-transparent to-transparent",
+      border: "hover:border-emerald-500/20",
+    },
     ...(canViewFinancials
       ? [
           {
