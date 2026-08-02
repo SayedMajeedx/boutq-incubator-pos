@@ -41,38 +41,87 @@ function AuthPage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
 
+  // Auto-redirect if user already has an active authenticated session
   useEffect(() => {
     setPasskeySupported(
       window.isSecureContext && typeof window.PublicKeyCredential !== "undefined",
     );
-  }, []);
+
+    let isSubscribed = true;
+
+    async function checkExistingSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && isSubscribed) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, brand_id")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        let slug = "boutq";
+        if (profile?.brand_id) {
+          const { data: brand } = await supabase
+            .from("brands")
+            .select("slug")
+            .eq("id", profile.brand_id)
+            .maybeSingle();
+          if (brand?.slug) slug = brand.slug;
+        }
+
+        navigate({ to: "/admin/b/$slug/pos", params: { slug } });
+      }
+    }
+
+    checkExistingSession();
+    return () => {
+      isSubscribed = false;
+    };
+  }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+
+      const user = authData.user;
+      if (!user) throw new Error("Authentication failed to return user.");
+
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, status")
-        .eq("id", user!.id)
+        .select("role, status, brand_id")
+        .eq("id", user.id)
         .maybeSingle();
+
       const dashboardRoles = new Set(["super_admin", "admin", "brand_admin", "staff", "courier"]);
       if (!profile || profile.status !== "active" || !dashboardRoles.has(profile.role ?? "")) {
         await supabase.auth.signOut();
         throw new Error(
           lang === "ar"
-            ? "هذا حساب عميل متجر وليس حساب لوحة تحكم."
-            : "This is a storefront customer account, not a dashboard account.",
+            ? "هذا حساب غير مخول لدخول لوحة كاشير POS."
+            : "This account is not authorized for POS access.",
         );
       }
+
       applyRememberMe(remember);
-      await new Promise((r) => setTimeout(r, 100));
-      navigate({ to: "/admin" });
+
+      // Resolve target brand slug
+      let slug = "boutq";
+      if (profile.brand_id) {
+        const { data: brand } = await supabase
+          .from("brands")
+          .select("slug")
+          .eq("id", profile.brand_id)
+          .maybeSingle();
+        if (brand?.slug) slug = brand.slug;
+      }
+
+      toast.success(lang === "ar" ? "تم تسجيل الدخول بنجاح" : "Sign in successful!");
+      await new Promise((r) => setTimeout(r, 150));
+
+      // Direct navigation to POS
+      navigate({ to: "/admin/b/$slug/pos", params: { slug } });
     } catch (err: any) {
       toast.error(translateAuthError(err, lang as any));
     } finally {
@@ -86,11 +135,13 @@ function AuthPage() {
       const { data, error } = await supabase.auth.signInWithPasskey();
       if (error) throw error;
       if (!data.user) throw new Error("Passkey sign-in did not return a user.");
+
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role, status")
+        .select("role, status, brand_id")
         .eq("id", data.user.id)
         .maybeSingle();
+
       const dashboardRoles = new Set(["super_admin", "admin", "brand_admin", "staff", "courier"]);
       if (
         profileError ||
@@ -105,8 +156,20 @@ function AuthPage() {
             : "This account is not authorized for dashboard access.",
         );
       }
+
       applyRememberMe(true);
-      await navigate({ to: "/admin" });
+
+      let slug = "boutq";
+      if (profile.brand_id) {
+        const { data: brand } = await supabase
+          .from("brands")
+          .select("slug")
+          .eq("id", profile.brand_id)
+          .maybeSingle();
+        if (brand?.slug) slug = brand.slug;
+      }
+
+      await navigate({ to: "/admin/b/$slug/pos", params: { slug } });
     } catch (err: any) {
       const cancelled =
         err?.name === "NotAllowedError" || /cancel|not allowed/i.test(err?.message ?? "");
@@ -136,46 +199,6 @@ function AuthPage() {
       {/* Subtle Grid Pattern Overlay */}
       <div className="absolute inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none z-0" />
 
-      {/* Floating Tech-Boutique Apparel Canvas Elements in Background */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden hidden lg:block opacity-40">
-        {/* Top-Left Floating Live Order Pill */}
-        <div className="absolute top-[18%] left-10 bg-zinc-900/90 border border-emerald-500/30 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-3">
-          <div className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-          <div className="text-xs font-semibold text-zinc-200">
-            {lang === "ar"
-              ? "صوفيا آل خليفة • عباية حرير أورجانزا"
-              : "Sofia Al Khalifa • Organza Silk Abaya"}
-          </div>
-          <span className="text-xs font-bold text-emerald-400">145.000 BHD</span>
-        </div>
-
-        {/* Bottom-Right Floating Sales Telemetry Card */}
-        <div className="absolute bottom-[18%] right-10 bg-zinc-900/85 border border-zinc-800/80 backdrop-blur-md p-4 rounded-2xl shadow-xl w-60">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-[#B76E79]" />
-              {lang === "ar" ? "مبيعات البوتيك" : "BOUTIQUE SALES"}
-            </span>
-            <span className="text-[9px] bg-rose-500/10 text-rose-300 font-bold border border-rose-500/20 px-2 py-0.5 rounded-full">
-              LIVE
-            </span>
-          </div>
-          <div className="text-xl font-bold font-mono text-zinc-100">4,284.150 BHD</div>
-          <div className="h-6 mt-2 flex items-end gap-1">
-            {[40, 55, 45, 60, 75, 50, 70, 85, 90, 80, 95].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t bg-zinc-800 transition-all duration-500"
-                style={{
-                  height: `${h}%`,
-                  backgroundColor: i === 10 ? "#B76E79" : undefined,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Top Header Controls Bar */}
       <div className="w-full max-w-md flex justify-end mb-6 relative z-10">
         <div className="flex items-center gap-2 h-9 px-3.5 bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-xs">
@@ -201,12 +224,14 @@ function AuthPage() {
               className="h-3.5 w-3.5 text-[#e0a2ab] animate-spin"
               style={{ animationDuration: "6s" }}
             />
-            <span>BOUTQ OS PORTAL</span>
+            <span>BOUTQ INCUBATOR POS</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black font-heading tracking-tight text-white drop-shadow-md">
             {t("app.title")}
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-300 font-medium">{t("app.portalSubtitle")}</p>
+          <p className="text-xs sm:text-sm text-zinc-300 font-medium">
+            {lang === "ar" ? "تسجيل دخول كاشير وإدارة الحاضنة" : "Cashier POS Login Portal"}
+          </p>
         </div>
 
         {/* Semi-Glossy Tech-Boutique Glass Card */}
@@ -223,8 +248,8 @@ function AuthPage() {
               <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-[#B76E79]" />
               <span>
                 {lang === "ar"
-                  ? "يقتصر الدخول على الشركاء المعتمدين ومندوبي التوصيل. يرجى استخدام بيانات الاعتماد الصادرة عن إدارة البوتيك."
-                  : "Access restricted to authorized partners and logistics couriers. Please use your credentials issued by the boutique administrator."}
+                  ? "تسجيل دخول كاشير وموظفي نقطة البيع للحاضنة."
+                  : "Cashier POS station sign in for Boutq Incubator."}
               </span>
             </p>
           </div>
@@ -238,10 +263,10 @@ function AuthPage() {
                 id="email"
                 type="email"
                 required
-                placeholder="partner@boutq.store"
+                placeholder="admin@boutq.com or cashier@boutq.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 bg-zinc-950/80 border-zinc-800 focus:border-[#B76E79] focus:ring-2 focus:ring-[#B76E79]/30 text-white placeholder:text-zinc-500 rounded-xl transition-all font-medium"
+                className="h-11 bg-zinc-950/80 border-zinc-800 focus:border-[#B76E79] focus:ring-2 focus:ring-[#B76E79]/30 text-white placeholder:text-zinc-500 rounded-xl transition-all font-medium text-sm"
               />
             </div>
 
@@ -253,11 +278,11 @@ function AuthPage() {
                 id="password"
                 type="password"
                 required
-                minLength={8}
+                minLength={6}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 bg-zinc-950/80 border-zinc-800 focus:border-[#B76E79] focus:ring-2 focus:ring-[#B76E79]/30 text-white placeholder:text-zinc-500 rounded-xl transition-all font-medium"
+                className="h-11 bg-zinc-950/80 border-zinc-800 focus:border-[#B76E79] focus:ring-2 focus:ring-[#B76E79]/30 text-white placeholder:text-zinc-500 rounded-xl transition-all font-medium text-sm"
               />
             </div>
 
@@ -270,12 +295,6 @@ function AuthPage() {
                 />
                 <span>{t("auth.rememberMe")}</span>
               </label>
-              <Link
-                to="/forgot-password"
-                className="text-xs font-bold text-[#e0a2ab] hover:text-white underline transition-colors"
-              >
-                {t("auth.forgotPassword")}
-              </Link>
             </div>
 
             <Button
@@ -318,24 +337,8 @@ function AuthPage() {
                       : "Sign in with Biometric"}
                 </span>
               </Button>
-
-              <p className="text-center text-[11px] font-medium text-zinc-400">
-                {lang === "ar"
-                  ? "استخدم Face ID أو Touch ID أو مفتاح أمان مسجّل."
-                  : "Use a registered Face ID, Touch ID, device PIN, or security key."}
-              </p>
             </div>
           )}
-        </div>
-
-        {/* Back Home Navigation */}
-        <div className="text-center">
-          <Link
-            to="/"
-            className="text-xs font-bold text-[#e0a2ab] hover:text-white transition-colors underline underline-offset-4"
-          >
-            {t("auth.backHome")}
-          </Link>
         </div>
       </div>
     </div>

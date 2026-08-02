@@ -5,26 +5,40 @@ import { supabase } from "@/integrations/supabase/client";
  * /admin smart redirector.
  *
  * Routes signed-in users to their brand workspace:
- * - super admin → /admin/brands (unless they have a brand assigned, then to that brand's dashboard)
- * - brand admin / staff → /admin/b/{their-slug}/dashboard
- * - anyone without a brand assignment → /admin/brands (super admin) or /auth
+ * - staff / cashier → /admin/b/{slug}/pos
+ * - brand admin / super admin → /admin/b/{slug}/dashboard or /admin/b/{slug}/pos
  */
 export const Route = createFileRoute("/_authenticated/admin/")({
   beforeLoad: async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw redirect({ to: "/auth" });
+    // If executing during SSR on Cloudflare Worker server without browser window,
+    // defer navigation check to client hydration
+    if (typeof window === "undefined") {
+      return {};
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    let user = sessionData.session?.user;
+
+    if (!user) {
+      const { data: userData } = await supabase.auth.getUser();
+      user = userData.user ?? null;
+    }
+
+    if (!user) {
+      throw redirect({ to: "/auth" });
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, brand_id, email")
+      .select("role, brand_id, email, status")
       .eq("id", user.id)
       .maybeSingle();
 
     const email = (user.email || "").toLowerCase();
     const isFixedSuperAdmin = email === "majeed@hotmail.it" || email === "majeed@hotmail.com";
     const isSuperAdmin = isFixedSuperAdmin || profile?.role === "super_admin";
+
+    let targetSlug = "boutq";
 
     if (profile?.brand_id) {
       const { data: brand } = await supabase
@@ -33,22 +47,28 @@ export const Route = createFileRoute("/_authenticated/admin/")({
         .eq("id", profile.brand_id)
         .maybeSingle();
       if (brand?.slug) {
-        throw redirect({
-          to: profile?.role === "courier" ? "/admin/b/$slug/orders" : "/admin/b/$slug/dashboard",
-          params: { slug: brand.slug },
-        });
+        targetSlug = brand.slug;
       }
     }
 
-    if (isSuperAdmin) {
-      throw redirect({ to: "/admin/brands" });
+    if (profile?.role === "courier") {
+      throw redirect({
+        to: "/admin/b/$slug/orders",
+        params: { slug: targetSlug },
+      });
     }
 
-    const { data: fallback } = await supabase.from("brands").select("slug").limit(1).maybeSingle();
-    if (fallback?.slug) {
-      throw redirect({ to: "/admin/b/$slug/dashboard", params: { slug: fallback.slug } });
+    if (profile?.role === "staff") {
+      throw redirect({
+        to: "/admin/b/$slug/pos",
+        params: { slug: targetSlug },
+      });
     }
 
-    throw redirect({ to: "/auth" });
+    // Default for admins
+    throw redirect({
+      to: "/admin/b/$slug/pos",
+      params: { slug: targetSlug },
+    });
   },
 });
