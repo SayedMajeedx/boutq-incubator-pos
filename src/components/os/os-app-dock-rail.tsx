@@ -29,8 +29,8 @@ export function OsAppDockRail({
   onExpandSidebar,
   className,
 }: OsAppDockRailProps) {
-  // Primary Rail Items (Top 6 Core Modules)
-  const primaryRailIds = ["dashboard", "orders", "inventory", "customers", "reports", "settings"];
+  // Primary Rail Items (Top Incubator & POS Modules)
+  const primaryRailIds = ["pos", "vendors", "contracts", "ledger", "inventory", "team", "dashboard"];
   const primaryItems = navItems.filter((i) => primaryRailIds.includes(i.id));
 
   return (

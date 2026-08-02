@@ -1,5 +1,5 @@
 import { useRouterState, useNavigate, useParams, useRouter } from "@tanstack/react-router";
-import { LogOut, Shield, Store, Search } from "lucide-react";
+import { LogOut, Shield, Store } from "lucide-react";
 import { SpotlightCommandPalette } from "@/components/spotlight-command-palette";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,6 @@ import { OsSidebar } from "@/components/os/os-sidebar";
 import { OsMenuBar } from "@/components/os/os-menu-bar";
 import { OsAppWindow } from "@/components/os/os-app-window";
 import { OsMobileNavigation } from "@/components/os/os-mobile-navigation";
-import { OsRecentHistoryBar } from "@/components/os/os-recent-history-bar";
 import { cn } from "@/lib/utils";
 
 type BrandRow = { id: string; slug: string; name_en: string; is_active: boolean };
@@ -26,6 +25,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, lang, setLang } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+
+  const isPosRoute = pathname.endsWith("/pos") || pathname.includes("/pos");
 
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -122,18 +123,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Fallback: use the user's own brand slug when outside /b/:slug
   const activeSlug = urlSlug ?? profile?.brand?.slug ?? null;
 
-  // Warm the four primary applications once authentication and the active
-  // brand are known. This keeps the OS-like app switch fast even before a
-  // pointer happens to hover a dock item.
+  // Warm primary applications once authentication and active brand are known
   useEffect(() => {
     if (!activeSlug || isLoading || !profile) return;
 
     const preloadPrimaryApps = () => {
       const destinations = [
+        "/admin/b/$slug/pos",
         "/admin/b/$slug/dashboard",
-        "/admin/b/$slug/orders",
         "/admin/b/$slug/inventory",
-        "/admin/b/$slug/customers",
+        "/admin/b/$slug/orders",
       ] as const;
 
       for (const to of destinations) {
@@ -289,7 +288,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main Boutq OS Workspace Frame */}
       <div className="flex-1 flex overflow-hidden">
         {/* Level 1: Collapsible Navigation (Full Sidebar vs Compact Dock Rail) */}
-        {!isFocusMode &&
+        {!isFocusMode && !isPosRoute &&
           (sidebarExpanded ? (
             <OsSidebar
               brandLabel={brandLabel}
@@ -318,84 +317,92 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           ))}
 
-        {/* Mobile Navigation Header & Bottom Dock */}
-        <OsMobileNavigation
-          brandLabel={brandLabel}
-          currentPageLabel={currentPageLabel}
-          activeSlug={activeSlug}
-          navItems={navItems}
-          pathname={pathname}
-          lang={lang}
-          onSetLang={setLang}
-          onSignOut={signOut}
-          mobileOpen={mobileOpen}
-          onOpenChangeMobile={setMobileOpen}
-        />
+        {/* Mobile Navigation Header & Bottom Dock (hidden on POS route for full screen cashier UI) */}
+        {!isPosRoute && (
+          <OsMobileNavigation
+            brandLabel={brandLabel}
+            currentPageLabel={currentPageLabel}
+            activeSlug={activeSlug}
+            navItems={navItems}
+            pathname={pathname}
+            lang={lang}
+            onSetLang={setLang}
+            onSignOut={signOut}
+            mobileOpen={mobileOpen}
+            onOpenChangeMobile={setMobileOpen}
+          />
+        )}
 
         {/* Level 2: Active Application Window Frame */}
-        <div
-          className={cn(
-            "flex-1 flex flex-col min-w-0 print-area pt-14 md:pt-0 overflow-hidden transition-all duration-300",
-            isFocusMode && "ps-3 pt-3",
-          )}
-        >
-          {/* Level 1: Top System OS Menu Bar */}
-          {!isFocusMode && (
-            <OsMenuBar
-              brandLabel={brandLabel}
-              lang={lang}
-              onSetLang={setLang}
-              onOpenSpotlight={() => setSpotlightOpen(true)}
-              onSignOut={signOut}
-              userEmail={profile?.email}
-            />
-          )}
-
-          {/* Level 2: Active Application Window */}
-          <main className="relative flex-1 flex flex-col min-h-0 mx-0 md:mx-3 md:mb-3 overflow-hidden select-text">
-            <OsAppWindow
-              icon={activeNavItem?.icon}
-              title={currentPageLabel || brandLabel}
-              subtitle={undefined}
-              isFocusMode={isFocusMode}
-              onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
-              pageKey={pathname}
-              badge={
-                activeSlug && (
-                  <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                    {activeSlug.toUpperCase()}
-                  </span>
-                )
-              }
-              actions={
-                <div className="flex items-center gap-1.5">
-                  {activeSlug && !isCourier && (
-                    <a
-                      href={
-                        typeof window !== "undefined" &&
-                        window.location.hostname.toLowerCase() !== "localhost" &&
-                        window.location.hostname.toLowerCase() !== "127.0.0.1"
-                          ? `https://${activeSlug}.boutq.store`
-                          : `/${activeSlug}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 h-6.5 px-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md transition-colors"
-                      title={lang === "ar" ? "عرض المتجر الإلكتروني" : "View Live Storefront"}
-                    >
-                      <Store className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline text-[11px]">
-                        {lang === "ar" ? "المتجر" : "Storefront"}
-                      </span>
-                    </a>
-                  )}
-                </div>
-              }
-            >
-              {children}
-            </OsAppWindow>
+        {isPosRoute ? (
+          <main className="flex-1 flex flex-col min-w-0 h-full w-full overflow-hidden select-text">
+            {children}
           </main>
-        </div>
+        ) : (
+          <div
+            className={cn(
+              "flex-1 flex flex-col min-w-0 print-area pt-14 md:pt-0 overflow-hidden transition-all duration-300",
+              isFocusMode && "ps-3 pt-3",
+            )}
+          >
+            {/* Level 1: Top System OS Menu Bar */}
+            {!isFocusMode && (
+              <OsMenuBar
+                brandLabel={brandLabel}
+                lang={lang}
+                onSetLang={setLang}
+                onOpenSpotlight={() => setSpotlightOpen(true)}
+                onSignOut={signOut}
+                userEmail={profile?.email}
+              />
+            )}
+
+            {/* Level 2: Active Application Window */}
+            <main className="relative flex-1 flex flex-col min-h-0 mx-0 md:mx-3 md:mb-3 overflow-hidden select-text">
+              <OsAppWindow
+                icon={activeNavItem?.icon}
+                title={currentPageLabel || brandLabel}
+                subtitle={undefined}
+                isFocusMode={isFocusMode}
+                onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
+                pageKey={pathname}
+                badge={
+                  activeSlug && (
+                    <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                      {activeSlug.toUpperCase()}
+                    </span>
+                  )
+                }
+                actions={
+                  <div className="flex items-center gap-1.5">
+                    {activeSlug && !isCourier && (
+                      <a
+                        href={
+                          typeof window !== "undefined" &&
+                          window.location.hostname.toLowerCase() !== "localhost" &&
+                          window.location.hostname.toLowerCase() !== "127.0.0.1"
+                            ? `https://${activeSlug}.boutq.store`
+                            : `/${activeSlug}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 h-6.5 px-2 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md transition-colors"
+                        title={lang === "ar" ? "عرض المتجر الإلكتروني" : "View Live Storefront"}
+                      >
+                        <Store className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline text-[11px]">
+                          {lang === "ar" ? "المتجر" : "Storefront"}
+                        </span>
+                      </a>
+                    )}
+                  </div>
+                }
+              >
+                {children}
+              </OsAppWindow>
+            </main>
+          </div>
+        )}
       </div>
 
       {/* Level 3: Spotlight Command Palette */}

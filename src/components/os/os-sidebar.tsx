@@ -36,13 +36,10 @@ export function OsSidebar({
   className,
 }: OsSidebarProps) {
   const sections = [
-    { id: "overview", header: lang === "ar" ? "نظرة عامة" : "OVERVIEW" },
-    { id: "operations", header: lang === "ar" ? "العمليات" : "OPERATIONS" },
-    { id: "growth_finance", header: lang === "ar" ? "النمو والمالية" : "GROWTH & FINANCE" },
-    {
-      id: "storefront_settings",
-      header: lang === "ar" ? "المتجر والإعدادات" : "STOREFRONT & SETTINGS",
-    },
+    { id: "pos_retail", header: lang === "ar" ? "نقطة البيع والكاشير" : "RETAIL & POS STATION" },
+    { id: "incubator", header: lang === "ar" ? "إدارة الحاضنة والبائعين" : "INCUBATOR & VENDORS" },
+    { id: "operations", header: lang === "ar" ? "المخزون والكاشيرية" : "INVENTORY & TEAM" },
+    { id: "system", header: lang === "ar" ? "النظام واللوحة" : "DASHBOARD & SETTINGS" },
   ];
 
   return (
