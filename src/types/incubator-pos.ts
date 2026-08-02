@@ -95,3 +95,51 @@ export interface POSShift {
   created_at: string;
   updated_at: string;
 }
+
+export type LedgerEntryType = 'sale' | 'commission_deduction' | 'rent_deduction' | 'payout' | 'adjustment';
+export type LedgerReferenceType = 'order' | 'order_item' | 'rent_invoice' | 'payout' | 'adjustment';
+
+export interface VendorLedgerEntry {
+  id: string;
+  brand_id: string;
+  vendor_id: string;
+  shift_id?: string | null;
+  amount: number; // positive for sale credit, negative for deductions/payouts
+  type: LedgerEntryType;
+  reference_type?: LedgerReferenceType | null;
+  reference_id?: string | null;
+  description?: string | null;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface CheckoutItemInput {
+  product_id?: string;
+  variant_id?: string;
+  quantity: number;
+  unit_price: number;
+  barcode?: string;
+}
+
+export interface CheckoutPaymentInput {
+  payment_method: 'cash' | 'benefit_pay' | 'card';
+  amount: number;
+}
+
+export interface CheckoutPayload {
+  brand_id: string;
+  shift_id: string;
+  items: CheckoutItemInput[];
+  payments: CheckoutPaymentInput[];
+  customer_id?: string;
+  notes?: string;
+}
+
+export interface CheckoutResult {
+  success: boolean;
+  order_id: string;
+  order_number: string;
+  total_amount: number;
+  items_count: number;
+  created_at: string;
+}
