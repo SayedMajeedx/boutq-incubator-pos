@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "bhpura-d219813a",
+  "name": "boutq-incubator-pos",
   "main": "src/server.ts",
   "compatibility_date": "2026-07-24",
   "compatibility_flags": ["nodejs_compat"],
@@ -8,36 +8,17 @@
     "directory": "dist/client",
     "binding": "ASSETS"
   },
-  "routes": [
-    {
-      "pattern": "*.boutq.store/*",
-      "zone_name": "boutq.store"
-    },
-    {
-      "pattern": "boutq.store",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.boutq.store",
-      "custom_domain": true
-    }
-  ],
   "secrets": {
     "required": [
       "SUPABASE_URL",
       "SUPABASE_SERVICE_ROLE_KEY",
-      "ORDER_EMAIL_WEBHOOK_SECRET",
       "CRON_SECRET",
       "GEMINI_API_KEY",
       "APIFY_API_TOKEN",
       "R2_ACCOUNT_ID",
       "R2_ACCESS_KEY_ID",
       "R2_SECRET_ACCESS_KEY",
-      "R2_BUCKET_NAME",
-      "R2_PUBLIC_BASE_URL",
-      "R2_PRIVATE_ACCESS_KEY_ID",
-      "R2_PRIVATE_SECRET_ACCESS_KEY",
-      "R2_PRIVATE_BUCKET_NAME"
+      "R2_BUCKET_NAME"
     ]
   },
   "triggers": {
