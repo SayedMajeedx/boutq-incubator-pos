@@ -25,6 +25,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+import { PosShiftManager } from "@/components/incubator/pos-shift-manager";
+
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/reports/")({
   component: ReportsOverview,
 });
@@ -63,6 +65,9 @@ function ReportsOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Real POS Shift Control Manager */}
+      <PosShiftManager isRtl={lang === "ar"} />
+
       <ReportsToolbar
         lang={lang === "ar" ? "ar" : "en"}
         date={date}

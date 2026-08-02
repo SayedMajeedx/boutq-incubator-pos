@@ -237,6 +237,14 @@ function Inventory() {
     },
   });
 
+  const vendorsQuery = useQuery({
+    queryKey: ["inventory-vendors", brandId],
+    queryFn: async () => {
+      const { data } = await supabase.from("vendors").select("id, name_en, name_ar, vendor_code").eq("brand_id", brandId);
+      return data ?? [];
+    },
+  });
+
   const variants = useQuery({
     queryKey: ["variants", brandId],
     queryFn: async () => {
