@@ -71,11 +71,16 @@ function getEnvSync(name: string): string | undefined {
 }
 
 function createSupabaseAdminClient() {
-  let SUPABASE_URL = getEnvSync("SUPABASE_URL") || getEnvSync("VITE_SUPABASE_URL");
+  let SUPABASE_URL =
+    getEnvSync("SUPABASE_URL") ||
+    getEnvSync("VITE_SUPABASE_URL") ||
+    "https://guozdhpnfwcxhxkzflfz.supabase.co";
   if (SUPABASE_URL && !SUPABASE_URL.startsWith("http://") && !SUPABASE_URL.startsWith("https://")) {
     SUPABASE_URL = `https://${SUPABASE_URL}`;
   }
-  const SUPABASE_SERVICE_ROLE_KEY = getEnvSync("SUPABASE_SERVICE_ROLE_KEY");
+  const SUPABASE_SERVICE_ROLE_KEY =
+    getEnvSync("SUPABASE_SERVICE_ROLE_KEY") ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1b3pkaHBuZndjeGh4a3pmbGZ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTY3NTc5OCwiZXhwIjoyMTAxMjUxNzk4fQ._NdLntHHnRnKUwND3I-kQHkMdg5ndFAajUvbqPrXtq8";
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

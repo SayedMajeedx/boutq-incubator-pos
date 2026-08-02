@@ -9,26 +9,26 @@ export default defineConfig({
     "process.env.SUPABASE_URL": JSON.stringify(
       process.env.SUPABASE_URL ||
         process.env.VITE_SUPABASE_URL ||
-        "https://ikciahnuqhemvnyfvbyp.supabase.co"
+        "https://guozdhpnfwcxhxkzflfz.supabase.co"
     ),
     "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
       process.env.SUPABASE_PUBLISHABLE_KEY ||
         process.env.SUPABASE_ANON_KEY ||
         process.env.VITE_SUPABASE_ANON_KEY ||
         process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-        "sb_publishable_mZLaZzhuKAqvgwpsZmRslQ_YahrHqxy"
+        "sb_publishable_awijfMA2cMP8avG5TGlyug_HLfnijTR"
     ),
     "process.env.VITE_SUPABASE_URL": JSON.stringify(
       process.env.VITE_SUPABASE_URL ||
         process.env.SUPABASE_URL ||
-        "https://ikciahnuqhemvnyfvbyp.supabase.co"
+        "https://guozdhpnfwcxhxkzflfz.supabase.co"
     ),
     "process.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
         process.env.VITE_SUPABASE_ANON_KEY ||
         process.env.SUPABASE_PUBLISHABLE_KEY ||
         process.env.SUPABASE_ANON_KEY ||
-        "sb_publishable_mZLaZzhuKAqvgwpsZmRslQ_YahrHqxy"
+        "sb_publishable_awijfMA2cMP8avG5TGlyug_HLfnijTR"
     ),
   },
   environments: {

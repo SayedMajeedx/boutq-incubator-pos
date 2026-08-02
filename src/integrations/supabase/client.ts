@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { getEnvVariable } from "@/lib/runtime-env";
 
-const FALLBACK_SUPABASE_URL = "https://ikciahnuqhemvnyfvbyp.supabase.co";
-const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_mZLaZzhuKAqvgwpsZmRslQ_YahrHqxy";
+const FALLBACK_SUPABASE_URL = "https://guozdhpnfwcxhxkzflfz.supabase.co";
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_awijfMA2cMP8avG5TGlyug_HLfnijTR";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
