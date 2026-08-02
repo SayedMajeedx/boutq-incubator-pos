@@ -112,8 +112,7 @@ function ContractsPage() {
 
       if (vErr) throw vErr;
 
-      // 2. Insert Contract with unique signing_token
-      const signingToken = crypto.randomUUID();
+      // 2. Insert Contract (Postgres automatically sets signing_token DEFAULT)
       const { data: contract, error: cErr } = await supabase
         .from("vendor_contracts")
         .insert({
@@ -123,13 +122,14 @@ function ContractsPage() {
           commission_bps: bps,
           start_date: startDate,
           end_date: endDate,
-          signing_token: signingToken,
           status: "pending_signature",
         })
         .select()
         .single();
 
       if (cErr) throw cErr;
+
+      const tokenUrl = `${window.location.origin}/vendor/sign?token=${contract.signing_token}`;
 
       // 3. Generate Initial Rent Invoice
       await supabase.from("vendor_rent_invoices").insert({
