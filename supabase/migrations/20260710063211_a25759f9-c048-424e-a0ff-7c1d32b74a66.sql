@@ -1,0 +1,1 @@
+CREATE POLICY "Super admins can read app_config" ON public.app_config FOR SELECT TO authenticated USING (public.is_super_admin());

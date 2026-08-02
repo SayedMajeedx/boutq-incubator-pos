@@ -1,0 +1,2 @@
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS location_ar TEXT, ADD COLUMN IF NOT EXISTS location_en TEXT;
+UPDATE public.branches SET location_ar = COALESCE(location_ar, address_ar), location_en = COALESCE(location_en, address_en);

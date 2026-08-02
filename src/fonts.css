@@ -1,0 +1,41 @@
+/* Self-Hosted Storefront Typography Architecture */
+
+@font-face {
+  font-family: "29LT Bukra";
+  src: url("/fonts/bukramed.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "29LT Zarid Display";
+  src: url("/fonts/zariddisplay.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "29LT Kaff";
+  src: url("/fonts/kafflight.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "29LT Azer";
+  src: url("/fonts/azerextralight.woff2") format("woff2");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Local Arabic Font Fallback */
+@font-face {
+  font-family: "ArabicLocal";
+  src: url("/fonts/arabic-font.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}

@@ -1,0 +1,1 @@
+GRANT SELECT (size_unit) ON public.product_variants TO anon;

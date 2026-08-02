@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Boutq Store">
+  <rect width="512" height="512" rx="92" fill="#292B3A"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M151 142h-12c-14 0-25 11-25 25v178c0 14 11 25 25 25h12"/>
+    <path d="M181 142h-12c-14 0-25 11-25 25v178c0 14 11 25 25 25h12"/>
+    <path d="M211 142h-12c-14 0-25 11-25 25v178c0 14 11 25 25 25h12"/>
+  </g>
+  <path fill="#FFFFFF" d="M218 142h108c29 0 52 23 52 52 0 24-15 44-36 52h22c36 0 65 28 65 62s-29 62-65 62H218c-14 0-26-12-26-26V168c0-14 12-26 26-26Z"/>
+</svg>
