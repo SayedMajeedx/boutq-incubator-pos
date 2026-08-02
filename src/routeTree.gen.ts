@@ -41,6 +41,7 @@ import { Route as AuthenticatedAdminOrdersRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminTeamRouteImport } from './routes/_authenticated/admin.team'
 import { Route as ApiCronCleanupBenefitReceiptsRouteImport } from './routes/api.cron.cleanup-benefit-receipts'
+import { Route as ApiCronProcessRentDeductionsRouteImport } from './routes/api.cron.process-rent-deductions'
 import { Route as ApiOrdersStatusRouteImport } from './routes/api.orders.status'
 import { Route as AuthenticatedAdminBSlugRouteRouteImport } from './routes/_authenticated/admin.b.$slug.route'
 import { Route as AuthenticatedAdminSuperRequestsRouteImport } from './routes/_authenticated/admin.super.requests'
@@ -52,17 +53,20 @@ import { Route as BrandsBrandIdKindFilenameRouteImport } from './routes/brands.$
 import { Route as AuthenticatedAdminBSlugCampaignsRouteImport } from './routes/_authenticated/admin.b.$slug.campaigns'
 import { Route as AuthenticatedAdminBSlugCategoriesRouteImport } from './routes/_authenticated/admin.b.$slug.categories'
 import { Route as AuthenticatedAdminBSlugCommunicationsRouteImport } from './routes/_authenticated/admin.b.$slug.communications'
+import { Route as AuthenticatedAdminBSlugContractsRouteImport } from './routes/_authenticated/admin.b.$slug.contracts'
 import { Route as AuthenticatedAdminBSlugCustomersRouteImport } from './routes/_authenticated/admin.b.$slug.customers'
 import { Route as AuthenticatedAdminBSlugDashboardRouteImport } from './routes/_authenticated/admin.b.$slug.dashboard'
 import { Route as AuthenticatedAdminBSlugDiscountsRouteImport } from './routes/_authenticated/admin.b.$slug.discounts'
 import { Route as AuthenticatedAdminBSlugExpensesRouteImport } from './routes/_authenticated/admin.b.$slug.expenses'
 import { Route as AuthenticatedAdminBSlugIntegrationsRouteImport } from './routes/_authenticated/admin.b.$slug.integrations'
 import { Route as AuthenticatedAdminBSlugInventoryRouteImport } from './routes/_authenticated/admin.b.$slug.inventory'
+import { Route as AuthenticatedAdminBSlugLedgerRouteImport } from './routes/_authenticated/admin.b.$slug.ledger'
 import { Route as AuthenticatedAdminBSlugPagesRouteImport } from './routes/_authenticated/admin.b.$slug.pages'
 import { Route as AuthenticatedAdminBSlugPosRouteImport } from './routes/_authenticated/admin.b.$slug.pos'
 import { Route as AuthenticatedAdminBSlugReportsRouteImport } from './routes/_authenticated/admin.b.$slug.reports'
 import { Route as AuthenticatedAdminBSlugSettingsRouteImport } from './routes/_authenticated/admin.b.$slug.settings'
 import { Route as AuthenticatedAdminBSlugTeamRouteImport } from './routes/_authenticated/admin.b.$slug.team'
+import { Route as AuthenticatedAdminBSlugVendorPortalRouteImport } from './routes/_authenticated/admin.b.$slug.vendor-portal'
 import { Route as AuthenticatedAdminBSlugCustomersCustomerIdRouteImport } from './routes/_authenticated/admin.b.$slug.customers.$customerId'
 import { Route as AuthenticatedAdminBSlugOrdersIndexRouteImport } from './routes/_authenticated/admin.b.$slug.orders.index'
 import { Route as AuthenticatedAdminBSlugOrdersIdRouteImport } from './routes/_authenticated/admin.b.$slug.orders.$id'
@@ -239,6 +243,12 @@ const ApiCronCleanupBenefitReceiptsRoute =
     path: '/api/cron/cleanup-benefit-receipts',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCronProcessRentDeductionsRoute =
+  ApiCronProcessRentDeductionsRouteImport.update({
+    id: '/api/cron/process-rent-deductions',
+    path: '/api/cron/process-rent-deductions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOrdersStatusRoute = ApiOrdersStatusRouteImport.update({
   id: '/api/orders/status',
   path: '/api/orders/status',
@@ -303,6 +313,12 @@ const AuthenticatedAdminBSlugCommunicationsRoute =
     path: '/communications',
     getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
   } as any)
+const AuthenticatedAdminBSlugContractsRoute =
+  AuthenticatedAdminBSlugContractsRouteImport.update({
+    id: '/contracts',
+    path: '/contracts',
+    getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
+  } as any)
 const AuthenticatedAdminBSlugCustomersRoute =
   AuthenticatedAdminBSlugCustomersRouteImport.update({
     id: '/customers',
@@ -339,6 +355,12 @@ const AuthenticatedAdminBSlugInventoryRoute =
     path: '/inventory',
     getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
   } as any)
+const AuthenticatedAdminBSlugLedgerRoute =
+  AuthenticatedAdminBSlugLedgerRouteImport.update({
+    id: '/ledger',
+    path: '/ledger',
+    getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
+  } as any)
 const AuthenticatedAdminBSlugPagesRoute =
   AuthenticatedAdminBSlugPagesRouteImport.update({
     id: '/pages',
@@ -367,6 +389,12 @@ const AuthenticatedAdminBSlugTeamRoute =
   AuthenticatedAdminBSlugTeamRouteImport.update({
     id: '/team',
     path: '/team',
+    getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
+  } as any)
+const AuthenticatedAdminBSlugVendorPortalRoute =
+  AuthenticatedAdminBSlugVendorPortalRouteImport.update({
+    id: '/vendor-portal',
+    path: '/vendor-portal',
     getParentRoute: () => AuthenticatedAdminBSlugRouteRoute,
   } as any)
 const AuthenticatedAdminBSlugCustomersCustomerIdRoute =
@@ -449,6 +477,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/cron/cleanup-benefit-receipts': typeof ApiCronCleanupBenefitReceiptsRoute
+  '/api/cron/process-rent-deductions': typeof ApiCronProcessRentDeductionsRoute
   '/api/orders/status': typeof ApiOrdersStatusRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/b/$slug': typeof AuthenticatedAdminBSlugRouteRouteWithChildren
@@ -461,17 +490,20 @@ export interface FileRoutesByFullPath {
   '/admin/b/$slug/campaigns': typeof AuthenticatedAdminBSlugCampaignsRoute
   '/admin/b/$slug/categories': typeof AuthenticatedAdminBSlugCategoriesRoute
   '/admin/b/$slug/communications': typeof AuthenticatedAdminBSlugCommunicationsRoute
+  '/admin/b/$slug/contracts': typeof AuthenticatedAdminBSlugContractsRoute
   '/admin/b/$slug/customers': typeof AuthenticatedAdminBSlugCustomersRouteWithChildren
   '/admin/b/$slug/dashboard': typeof AuthenticatedAdminBSlugDashboardRoute
   '/admin/b/$slug/discounts': typeof AuthenticatedAdminBSlugDiscountsRoute
   '/admin/b/$slug/expenses': typeof AuthenticatedAdminBSlugExpensesRoute
   '/admin/b/$slug/integrations': typeof AuthenticatedAdminBSlugIntegrationsRoute
   '/admin/b/$slug/inventory': typeof AuthenticatedAdminBSlugInventoryRoute
+  '/admin/b/$slug/ledger': typeof AuthenticatedAdminBSlugLedgerRoute
   '/admin/b/$slug/pages': typeof AuthenticatedAdminBSlugPagesRoute
   '/admin/b/$slug/pos': typeof AuthenticatedAdminBSlugPosRoute
   '/admin/b/$slug/reports': typeof AuthenticatedAdminBSlugReportsRouteWithChildren
   '/admin/b/$slug/settings': typeof AuthenticatedAdminBSlugSettingsRoute
   '/admin/b/$slug/team': typeof AuthenticatedAdminBSlugTeamRoute
+  '/admin/b/$slug/vendor-portal': typeof AuthenticatedAdminBSlugVendorPortalRoute
   '/admin/b/$slug/customers/$customerId': typeof AuthenticatedAdminBSlugCustomersCustomerIdRoute
   '/admin/b/$slug/orders/$id': typeof AuthenticatedAdminBSlugOrdersIdRoute
   '/admin/b/$slug/reports/customers': typeof AuthenticatedAdminBSlugReportsCustomersRoute
@@ -510,6 +542,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/cron/cleanup-benefit-receipts': typeof ApiCronCleanupBenefitReceiptsRoute
+  '/api/cron/process-rent-deductions': typeof ApiCronProcessRentDeductionsRoute
   '/api/orders/status': typeof ApiOrdersStatusRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/b/$slug': typeof AuthenticatedAdminBSlugRouteRouteWithChildren
@@ -522,16 +555,19 @@ export interface FileRoutesByTo {
   '/admin/b/$slug/campaigns': typeof AuthenticatedAdminBSlugCampaignsRoute
   '/admin/b/$slug/categories': typeof AuthenticatedAdminBSlugCategoriesRoute
   '/admin/b/$slug/communications': typeof AuthenticatedAdminBSlugCommunicationsRoute
+  '/admin/b/$slug/contracts': typeof AuthenticatedAdminBSlugContractsRoute
   '/admin/b/$slug/customers': typeof AuthenticatedAdminBSlugCustomersRouteWithChildren
   '/admin/b/$slug/dashboard': typeof AuthenticatedAdminBSlugDashboardRoute
   '/admin/b/$slug/discounts': typeof AuthenticatedAdminBSlugDiscountsRoute
   '/admin/b/$slug/expenses': typeof AuthenticatedAdminBSlugExpensesRoute
   '/admin/b/$slug/integrations': typeof AuthenticatedAdminBSlugIntegrationsRoute
   '/admin/b/$slug/inventory': typeof AuthenticatedAdminBSlugInventoryRoute
+  '/admin/b/$slug/ledger': typeof AuthenticatedAdminBSlugLedgerRoute
   '/admin/b/$slug/pages': typeof AuthenticatedAdminBSlugPagesRoute
   '/admin/b/$slug/pos': typeof AuthenticatedAdminBSlugPosRoute
   '/admin/b/$slug/settings': typeof AuthenticatedAdminBSlugSettingsRoute
   '/admin/b/$slug/team': typeof AuthenticatedAdminBSlugTeamRoute
+  '/admin/b/$slug/vendor-portal': typeof AuthenticatedAdminBSlugVendorPortalRoute
   '/admin/b/$slug/customers/$customerId': typeof AuthenticatedAdminBSlugCustomersCustomerIdRoute
   '/admin/b/$slug/orders/$id': typeof AuthenticatedAdminBSlugOrdersIdRoute
   '/admin/b/$slug/reports/customers': typeof AuthenticatedAdminBSlugReportsCustomersRoute
@@ -574,6 +610,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/team': typeof AuthenticatedAdminTeamRoute
   '/api/cron/cleanup-benefit-receipts': typeof ApiCronCleanupBenefitReceiptsRoute
+  '/api/cron/process-rent-deductions': typeof ApiCronProcessRentDeductionsRoute
   '/api/orders/status': typeof ApiOrdersStatusRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/b/$slug': typeof AuthenticatedAdminBSlugRouteRouteWithChildren
@@ -586,17 +623,20 @@ export interface FileRoutesById {
   '/_authenticated/admin/b/$slug/campaigns': typeof AuthenticatedAdminBSlugCampaignsRoute
   '/_authenticated/admin/b/$slug/categories': typeof AuthenticatedAdminBSlugCategoriesRoute
   '/_authenticated/admin/b/$slug/communications': typeof AuthenticatedAdminBSlugCommunicationsRoute
+  '/_authenticated/admin/b/$slug/contracts': typeof AuthenticatedAdminBSlugContractsRoute
   '/_authenticated/admin/b/$slug/customers': typeof AuthenticatedAdminBSlugCustomersRouteWithChildren
   '/_authenticated/admin/b/$slug/dashboard': typeof AuthenticatedAdminBSlugDashboardRoute
   '/_authenticated/admin/b/$slug/discounts': typeof AuthenticatedAdminBSlugDiscountsRoute
   '/_authenticated/admin/b/$slug/expenses': typeof AuthenticatedAdminBSlugExpensesRoute
   '/_authenticated/admin/b/$slug/integrations': typeof AuthenticatedAdminBSlugIntegrationsRoute
   '/_authenticated/admin/b/$slug/inventory': typeof AuthenticatedAdminBSlugInventoryRoute
+  '/_authenticated/admin/b/$slug/ledger': typeof AuthenticatedAdminBSlugLedgerRoute
   '/_authenticated/admin/b/$slug/pages': typeof AuthenticatedAdminBSlugPagesRoute
   '/_authenticated/admin/b/$slug/pos': typeof AuthenticatedAdminBSlugPosRoute
   '/_authenticated/admin/b/$slug/reports': typeof AuthenticatedAdminBSlugReportsRouteWithChildren
   '/_authenticated/admin/b/$slug/settings': typeof AuthenticatedAdminBSlugSettingsRoute
   '/_authenticated/admin/b/$slug/team': typeof AuthenticatedAdminBSlugTeamRoute
+  '/_authenticated/admin/b/$slug/vendor-portal': typeof AuthenticatedAdminBSlugVendorPortalRoute
   '/_authenticated/admin/b/$slug/customers/$customerId': typeof AuthenticatedAdminBSlugCustomersCustomerIdRoute
   '/_authenticated/admin/b/$slug/orders/$id': typeof AuthenticatedAdminBSlugOrdersIdRoute
   '/_authenticated/admin/b/$slug/reports/customers': typeof AuthenticatedAdminBSlugReportsCustomersRoute
@@ -639,6 +679,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/team'
     | '/api/cron/cleanup-benefit-receipts'
+    | '/api/cron/process-rent-deductions'
     | '/api/orders/status'
     | '/admin/'
     | '/admin/b/$slug'
@@ -651,17 +692,20 @@ export interface FileRouteTypes {
     | '/admin/b/$slug/campaigns'
     | '/admin/b/$slug/categories'
     | '/admin/b/$slug/communications'
+    | '/admin/b/$slug/contracts'
     | '/admin/b/$slug/customers'
     | '/admin/b/$slug/dashboard'
     | '/admin/b/$slug/discounts'
     | '/admin/b/$slug/expenses'
     | '/admin/b/$slug/integrations'
     | '/admin/b/$slug/inventory'
+    | '/admin/b/$slug/ledger'
     | '/admin/b/$slug/pages'
     | '/admin/b/$slug/pos'
     | '/admin/b/$slug/reports'
     | '/admin/b/$slug/settings'
     | '/admin/b/$slug/team'
+    | '/admin/b/$slug/vendor-portal'
     | '/admin/b/$slug/customers/$customerId'
     | '/admin/b/$slug/orders/$id'
     | '/admin/b/$slug/reports/customers'
@@ -700,6 +744,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/team'
     | '/api/cron/cleanup-benefit-receipts'
+    | '/api/cron/process-rent-deductions'
     | '/api/orders/status'
     | '/admin'
     | '/admin/b/$slug'
@@ -712,16 +757,19 @@ export interface FileRouteTypes {
     | '/admin/b/$slug/campaigns'
     | '/admin/b/$slug/categories'
     | '/admin/b/$slug/communications'
+    | '/admin/b/$slug/contracts'
     | '/admin/b/$slug/customers'
     | '/admin/b/$slug/dashboard'
     | '/admin/b/$slug/discounts'
     | '/admin/b/$slug/expenses'
     | '/admin/b/$slug/integrations'
     | '/admin/b/$slug/inventory'
+    | '/admin/b/$slug/ledger'
     | '/admin/b/$slug/pages'
     | '/admin/b/$slug/pos'
     | '/admin/b/$slug/settings'
     | '/admin/b/$slug/team'
+    | '/admin/b/$slug/vendor-portal'
     | '/admin/b/$slug/customers/$customerId'
     | '/admin/b/$slug/orders/$id'
     | '/admin/b/$slug/reports/customers'
@@ -763,6 +811,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/team'
     | '/api/cron/cleanup-benefit-receipts'
+    | '/api/cron/process-rent-deductions'
     | '/api/orders/status'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/b/$slug'
@@ -775,17 +824,20 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/b/$slug/campaigns'
     | '/_authenticated/admin/b/$slug/categories'
     | '/_authenticated/admin/b/$slug/communications'
+    | '/_authenticated/admin/b/$slug/contracts'
     | '/_authenticated/admin/b/$slug/customers'
     | '/_authenticated/admin/b/$slug/dashboard'
     | '/_authenticated/admin/b/$slug/discounts'
     | '/_authenticated/admin/b/$slug/expenses'
     | '/_authenticated/admin/b/$slug/integrations'
     | '/_authenticated/admin/b/$slug/inventory'
+    | '/_authenticated/admin/b/$slug/ledger'
     | '/_authenticated/admin/b/$slug/pages'
     | '/_authenticated/admin/b/$slug/pos'
     | '/_authenticated/admin/b/$slug/reports'
     | '/_authenticated/admin/b/$slug/settings'
     | '/_authenticated/admin/b/$slug/team'
+    | '/_authenticated/admin/b/$slug/vendor-portal'
     | '/_authenticated/admin/b/$slug/customers/$customerId'
     | '/_authenticated/admin/b/$slug/orders/$id'
     | '/_authenticated/admin/b/$slug/reports/customers'
@@ -807,6 +859,7 @@ export interface RootRouteChildren {
   InvoiceIdRoute: typeof InvoiceIdRoute
   PlatformFilenameRoute: typeof PlatformFilenameRoute
   ApiCronCleanupBenefitReceiptsRoute: typeof ApiCronCleanupBenefitReceiptsRoute
+  ApiCronProcessRentDeductionsRoute: typeof ApiCronProcessRentDeductionsRoute
   ApiOrdersStatusRoute: typeof ApiOrdersStatusRoute
   ApiPublicPaymentsCreateTapChargeRoute: typeof ApiPublicPaymentsCreateTapChargeRoute
   ApiPublicPaymentsTapRedirectRoute: typeof ApiPublicPaymentsTapRedirectRoute
@@ -1040,6 +1093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronCleanupBenefitReceiptsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/process-rent-deductions': {
+      id: '/api/cron/process-rent-deductions'
+      path: '/api/cron/process-rent-deductions'
+      fullPath: '/api/cron/process-rent-deductions'
+      preLoaderRoute: typeof ApiCronProcessRentDeductionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/orders/status': {
       id: '/api/orders/status'
       path: '/api/orders/status'
@@ -1117,6 +1177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBSlugCommunicationsRouteImport
       parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
     }
+    '/_authenticated/admin/b/$slug/contracts': {
+      id: '/_authenticated/admin/b/$slug/contracts'
+      path: '/contracts'
+      fullPath: '/admin/b/$slug/contracts'
+      preLoaderRoute: typeof AuthenticatedAdminBSlugContractsRouteImport
+      parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
+    }
     '/_authenticated/admin/b/$slug/customers': {
       id: '/_authenticated/admin/b/$slug/customers'
       path: '/customers'
@@ -1159,6 +1226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBSlugInventoryRouteImport
       parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
     }
+    '/_authenticated/admin/b/$slug/ledger': {
+      id: '/_authenticated/admin/b/$slug/ledger'
+      path: '/ledger'
+      fullPath: '/admin/b/$slug/ledger'
+      preLoaderRoute: typeof AuthenticatedAdminBSlugLedgerRouteImport
+      parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
+    }
     '/_authenticated/admin/b/$slug/pages': {
       id: '/_authenticated/admin/b/$slug/pages'
       path: '/pages'
@@ -1192,6 +1266,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/admin/b/$slug/team'
       preLoaderRoute: typeof AuthenticatedAdminBSlugTeamRouteImport
+      parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
+    }
+    '/_authenticated/admin/b/$slug/vendor-portal': {
+      id: '/_authenticated/admin/b/$slug/vendor-portal'
+      path: '/vendor-portal'
+      fullPath: '/admin/b/$slug/vendor-portal'
+      preLoaderRoute: typeof AuthenticatedAdminBSlugVendorPortalRouteImport
       parentRoute: typeof AuthenticatedAdminBSlugRouteRoute
     }
     '/_authenticated/admin/b/$slug/customers/$customerId': {
@@ -1333,17 +1414,20 @@ interface AuthenticatedAdminBSlugRouteRouteChildren {
   AuthenticatedAdminBSlugCampaignsRoute: typeof AuthenticatedAdminBSlugCampaignsRoute
   AuthenticatedAdminBSlugCategoriesRoute: typeof AuthenticatedAdminBSlugCategoriesRoute
   AuthenticatedAdminBSlugCommunicationsRoute: typeof AuthenticatedAdminBSlugCommunicationsRoute
+  AuthenticatedAdminBSlugContractsRoute: typeof AuthenticatedAdminBSlugContractsRoute
   AuthenticatedAdminBSlugCustomersRoute: typeof AuthenticatedAdminBSlugCustomersRouteWithChildren
   AuthenticatedAdminBSlugDashboardRoute: typeof AuthenticatedAdminBSlugDashboardRoute
   AuthenticatedAdminBSlugDiscountsRoute: typeof AuthenticatedAdminBSlugDiscountsRoute
   AuthenticatedAdminBSlugExpensesRoute: typeof AuthenticatedAdminBSlugExpensesRoute
   AuthenticatedAdminBSlugIntegrationsRoute: typeof AuthenticatedAdminBSlugIntegrationsRoute
   AuthenticatedAdminBSlugInventoryRoute: typeof AuthenticatedAdminBSlugInventoryRoute
+  AuthenticatedAdminBSlugLedgerRoute: typeof AuthenticatedAdminBSlugLedgerRoute
   AuthenticatedAdminBSlugPagesRoute: typeof AuthenticatedAdminBSlugPagesRoute
   AuthenticatedAdminBSlugPosRoute: typeof AuthenticatedAdminBSlugPosRoute
   AuthenticatedAdminBSlugReportsRoute: typeof AuthenticatedAdminBSlugReportsRouteWithChildren
   AuthenticatedAdminBSlugSettingsRoute: typeof AuthenticatedAdminBSlugSettingsRoute
   AuthenticatedAdminBSlugTeamRoute: typeof AuthenticatedAdminBSlugTeamRoute
+  AuthenticatedAdminBSlugVendorPortalRoute: typeof AuthenticatedAdminBSlugVendorPortalRoute
   AuthenticatedAdminBSlugOrdersIdRoute: typeof AuthenticatedAdminBSlugOrdersIdRoute
   AuthenticatedAdminBSlugOrdersIndexRoute: typeof AuthenticatedAdminBSlugOrdersIndexRoute
 }
@@ -1356,6 +1440,8 @@ const AuthenticatedAdminBSlugRouteRouteChildren: AuthenticatedAdminBSlugRouteRou
       AuthenticatedAdminBSlugCategoriesRoute,
     AuthenticatedAdminBSlugCommunicationsRoute:
       AuthenticatedAdminBSlugCommunicationsRoute,
+    AuthenticatedAdminBSlugContractsRoute:
+      AuthenticatedAdminBSlugContractsRoute,
     AuthenticatedAdminBSlugCustomersRoute:
       AuthenticatedAdminBSlugCustomersRouteWithChildren,
     AuthenticatedAdminBSlugDashboardRoute:
@@ -1367,12 +1453,15 @@ const AuthenticatedAdminBSlugRouteRouteChildren: AuthenticatedAdminBSlugRouteRou
       AuthenticatedAdminBSlugIntegrationsRoute,
     AuthenticatedAdminBSlugInventoryRoute:
       AuthenticatedAdminBSlugInventoryRoute,
+    AuthenticatedAdminBSlugLedgerRoute: AuthenticatedAdminBSlugLedgerRoute,
     AuthenticatedAdminBSlugPagesRoute: AuthenticatedAdminBSlugPagesRoute,
     AuthenticatedAdminBSlugPosRoute: AuthenticatedAdminBSlugPosRoute,
     AuthenticatedAdminBSlugReportsRoute:
       AuthenticatedAdminBSlugReportsRouteWithChildren,
     AuthenticatedAdminBSlugSettingsRoute: AuthenticatedAdminBSlugSettingsRoute,
     AuthenticatedAdminBSlugTeamRoute: AuthenticatedAdminBSlugTeamRoute,
+    AuthenticatedAdminBSlugVendorPortalRoute:
+      AuthenticatedAdminBSlugVendorPortalRoute,
     AuthenticatedAdminBSlugOrdersIdRoute: AuthenticatedAdminBSlugOrdersIdRoute,
     AuthenticatedAdminBSlugOrdersIndexRoute:
       AuthenticatedAdminBSlugOrdersIndexRoute,
@@ -1439,6 +1528,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceIdRoute: InvoiceIdRoute,
   PlatformFilenameRoute: PlatformFilenameRoute,
   ApiCronCleanupBenefitReceiptsRoute: ApiCronCleanupBenefitReceiptsRoute,
+  ApiCronProcessRentDeductionsRoute: ApiCronProcessRentDeductionsRoute,
   ApiOrdersStatusRoute: ApiOrdersStatusRoute,
   ApiPublicPaymentsCreateTapChargeRoute: ApiPublicPaymentsCreateTapChargeRoute,
   ApiPublicPaymentsTapRedirectRoute: ApiPublicPaymentsTapRedirectRoute,

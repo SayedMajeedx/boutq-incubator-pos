@@ -9,6 +9,10 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  clearAuthenticatedUserRequest,
+  getAuthenticatedUser,
+} from "@/lib/authenticated-user";
 
 export type UserRole = "super_admin" | "admin" | "brand_admin" | "staff" | "courier";
 export type UserStatus = "active" | "inactive";
@@ -100,28 +104,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   const fetchProfile = useCallback(
-    async (userId: string): Promise<Profile | null> => {
-      const { data: authData } = await supabase.auth.getUser();
-      const email = authData.user?.email || "";
-      return ensureProfile(userId, email);
-    },
+    async (userId: string, email = ""): Promise<Profile | null> =>
+      ensureProfile(userId, email),
     [ensureProfile],
   );
 
   const signOutAndRedirect = useCallback(async () => {
     await supabase.auth.signOut();
+    clearAuthenticatedUserRequest();
     navigate({ to: "/auth" });
   }, [navigate]);
 
   const refreshProfile = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) {
       setProfile(null);
       return;
     }
-    const p = await fetchProfile(user.id);
+    const p = await fetchProfile(user.id, user.email ?? "");
     setProfile(p);
   }, [fetchProfile]);
 
@@ -130,16 +130,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     mountedRef.current = true;
 
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getAuthenticatedUser();
       if (!mounted) return;
       if (!user) {
         setIsLoading(false);
         return;
       }
 
-      const p = await fetchProfile(user.id);
+      const p = await fetchProfile(user.id, user.email ?? "");
       if (!mounted) return;
       setProfile(p);
       setIsLoading(false);
@@ -156,7 +154,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             setProfile(null);
             return;
           }
-          const p = await fetchProfile(session.user.id);
+          const p = await fetchProfile(session.user.id, session.user.email ?? "");
           if (mounted) setProfile(p);
         })();
       }, 0);
