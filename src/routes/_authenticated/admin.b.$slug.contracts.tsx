@@ -122,7 +122,7 @@ function ContractsPage() {
           commission_bps: bps,
           start_date: startDate,
           end_date: endDate,
-          status: "pending_signature",
+          status: "draft",
         })
         .select()
         .single();
