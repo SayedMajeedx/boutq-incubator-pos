@@ -104,7 +104,7 @@ function DedicatedPOSPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*, vendors(id, vendor_code, name_en, name_ar)")
+        .select("*, product_variants(*)")
         .eq("brand_id", brand!.id)
         .order("name", { ascending: true });
       if (error) throw error;
@@ -142,10 +142,13 @@ function DedicatedPOSPage() {
   // Filtered Products
   const filteredProducts = useMemo(() => {
     return products.filter((p: any) => {
+      const title = (p.name || p.name_en || p.name_ar || "").toLowerCase();
       const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.vendors?.vendor_code &&
-          p.vendors.vendor_code.toLowerCase().includes(searchQuery.toLowerCase()));
+        title.includes(searchQuery.toLowerCase()) ||
+        p.product_variants?.some((v: any) =>
+          (v.barcode || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (v.sku || "").toLowerCase().includes(searchQuery.toLowerCase())
+        );
       const matchesCategory =
         selectedCategory === "all" || p.category_id === selectedCategory;
       return matchesSearch && matchesCategory;
@@ -175,9 +178,10 @@ function DedicatedPOSPage() {
         ...prev,
         {
           product_id: product.id,
-          title_en: product.name,
-          title_ar: product.name_ar || product.name,
-          vendor_code: product.vendors?.vendor_code || "INCUBATOR",
+          variant_id: product.product_variants?.[0]?.id,
+          title_en: product.name_en || product.name || "Product",
+          title_ar: product.name_ar || product.name || "منتج",
+          vendor_code: "INCUBATOR",
           vendor_id: product.vendor_id,
           unit_price: Number(product.base_price || product.price || 0),
           quantity: 1,
@@ -213,7 +217,7 @@ function DedicatedPOSPage() {
       // Query barcode mapping
       const { data: barcodeRecord } = await supabase
         .from("product_barcodes")
-        .select("*, products(*, vendors(*))")
+        .select("*, products(*, product_variants(*))")
         .eq("code", code)
         .maybeSingle();
 
@@ -222,12 +226,11 @@ function DedicatedPOSPage() {
         return;
       }
 
-      // Fallback query product by code / sku / vendor
+      // Fallback query product by code / sku / barcode
       const matchedProduct = products.find(
         (p: any) =>
-          p.sku === code ||
           p.id === code ||
-          (p.vendors?.vendor_code && p.vendors.vendor_code.toLowerCase() === code.toLowerCase())
+          p.product_variants?.some((v: any) => v.barcode === code || v.sku === code)
       );
 
       if (matchedProduct) {
