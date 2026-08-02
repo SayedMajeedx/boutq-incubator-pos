@@ -171,7 +171,8 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
   async ({ next }) => {
     let SUPABASE_URL =
       (await getEnvVariableAsync("SUPABASE_URL")) ||
-      (await getEnvVariableAsync("VITE_SUPABASE_URL"));
+      (await getEnvVariableAsync("VITE_SUPABASE_URL")) ||
+      "https://ikciahnuqhemvnyfvbyp.supabase.co";
     if (
       SUPABASE_URL &&
       !SUPABASE_URL.startsWith("http://") &&
@@ -182,7 +183,8 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     const SUPABASE_PUBLISHABLE_KEY =
       (await getEnvVariableAsync("SUPABASE_PUBLISHABLE_KEY")) ||
       (await getEnvVariableAsync("VITE_SUPABASE_ANON_KEY")) ||
-      (await getEnvVariableAsync("VITE_SUPABASE_PUBLISHABLE_KEY"));
+      (await getEnvVariableAsync("VITE_SUPABASE_PUBLISHABLE_KEY")) ||
+      "sb_publishable_mZLaZzhuKAqvgwpsZmRslQ_YahrHqxy";
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [
