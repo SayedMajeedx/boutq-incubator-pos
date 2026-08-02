@@ -104,6 +104,15 @@ export default {
       g.__CLOUDFLARE_ENV__ = env;
 
       const url = new URL(request.url);
+
+      // 1. SERVE STATIC CLIENT ASSETS DIRECTLY FROM env.ASSETS BEFORE SSR HANDLER
+      if (env.ASSETS) {
+        const assetResponse = await env.ASSETS.fetch(request);
+        if (assetResponse.status !== 404) {
+          return withPerformanceCacheHeaders(request, assetResponse);
+        }
+      }
+
       if (url.pathname === "/api/public/webhooks/meta-whatsapp") {
         const { handleMetaWhatsAppWebhook } = await import("./lib/meta-whatsapp.server");
         return withSecurityHeaders(await handleMetaWhatsAppWebhook(request, env, ctx));
