@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  base: "/",
   define: {
     "process.env.SUPABASE_URL": JSON.stringify(
       process.env.SUPABASE_URL ||

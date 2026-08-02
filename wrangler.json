@@ -5,7 +5,7 @@
   "compatibility_date": "2026-07-24",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "directory": "dist/client",
+    "directory": "./dist/client",
     "binding": "ASSETS"
   },
   "secrets": {
