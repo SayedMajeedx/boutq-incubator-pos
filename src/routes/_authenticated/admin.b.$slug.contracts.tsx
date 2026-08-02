@@ -24,7 +24,6 @@ import {
   Copy,
   ExternalLink,
   Store,
-  DollarSign,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/contracts")({
@@ -58,9 +57,9 @@ function ContractsPage() {
     },
   });
 
-  // Fetch Contracts
+  // Fetch Contracts with signing_token and signed_at
   const { data: contracts = [], refetch: refetchContracts } = useQuery({
-    queryKey: ["vendor-contracts", brand?.id],
+    queryKey: ["vendor-contracts-tokenized", brand?.id],
     enabled: !!brand?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -113,7 +112,8 @@ function ContractsPage() {
 
       if (vErr) throw vErr;
 
-      // 2. Insert Contract
+      // 2. Insert Contract with unique signing_token
+      const signingToken = crypto.randomUUID();
       const { data: contract, error: cErr } = await supabase
         .from("vendor_contracts")
         .insert({
@@ -123,7 +123,8 @@ function ContractsPage() {
           commission_bps: bps,
           start_date: startDate,
           end_date: endDate,
-          status: "draft",
+          signing_token: signingToken,
+          status: "pending_signature",
         })
         .select()
         .single();
@@ -131,19 +132,18 @@ function ContractsPage() {
       if (cErr) throw cErr;
 
       // 3. Generate Initial Rent Invoice
-      const { error: invErr } = await supabase.from("vendor_rent_invoices").insert({
+      await supabase.from("vendor_rent_invoices").insert({
         vendor_id: vendor.id,
         amount: rentVal,
         due_date: startDate,
         status: "pending",
       });
 
-      if (invErr) console.warn("Initial rent invoice insert warning:", invErr);
+      const signUrl = `${window.location.origin}/vendor/sign?token=${signingToken}`;
+      navigator.clipboard.writeText(signUrl);
 
       alert(
-        `تم تسجيل البائع وإنشاء عقد الإيجار بنجاح!\n- كود البائع: ${vendorCode}\n- رقم الرف: ${rackNumber}\n- الإيجار الشهري: ${rentVal.toFixed(
-          3
-        )} BHD\nيرجى إرسال رابط التوقيع للمستأجر لتوثيق العقد.`
+        `تم تسجيل البائع وإنشاء رابط التوقيع الإلكتروني بنجاح!\n\nرابط التوقيع التوكن المنسوخ:\n${signUrl}`
       );
 
       setIsOnboardModalOpen(false);
@@ -169,7 +169,7 @@ function ContractsPage() {
       alert(
         `خصم الإيجار التلقائي مكتمل!\n- الفواتير المخصومة: ${data.deducted_count}\n- المبلغ الكلي المقتطع: ${Number(
           data.deducted_amount
-        ).toFixed(3)} BHD\n- الفواتير المتبقية (رصيد المبيعات لا يكفي): ${data.skipped_count}`
+        ).toFixed(3)} BHD\n- الفواتير المتبقية: ${data.skipped_count}`
       );
       refetchInvoices();
       refetchContracts();
@@ -180,10 +180,10 @@ function ContractsPage() {
     }
   };
 
-  const copySignatureLink = (vendorName: string) => {
-    const portalUrl = `${window.location.origin}/admin/b/${slug}/vendor-portal`;
-    navigator.clipboard.writeText(portalUrl);
-    alert(`تم نسخ رابط التوقيع للبائع (${vendorName}):\n${portalUrl}`);
+  const copyTokenizedSignLink = (signingToken: string, vendorName: string) => {
+    const tokenUrl = `${window.location.origin}/vendor/sign?token=${signingToken}`;
+    navigator.clipboard.writeText(tokenUrl);
+    alert(`تم نسخ رابط التوقيع للبائع (${vendorName}):\n${tokenUrl}`);
   };
 
   return (
@@ -192,13 +192,13 @@ function ContractsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-white">العقود وفواتير الإيجار (Lease Contracts & Rent)</h1>
+            <h1 className="text-2xl font-black text-white">العقود وروابط التوقيع (Lease Contracts & Signing Links)</h1>
             <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-xs">
-              Live Incubator
+              Tokenized E-Sign
             </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            إضافة البائعين الجدد، إبرام عقود إيجار الرفوف، واقتطاع الإيجار تلقائياً من المبيعات
+            إضافة البائعين وتوليد رابط توقيع إلكتروني عام منفصل للتوقيع وتفعيل العقد
           </p>
         </div>
 
@@ -208,7 +208,7 @@ function ContractsPage() {
             className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg"
           >
             <Plus className="w-4 h-4" />
-            <span>تسجيل بائع وإنشاء عقد (+ Onboard Vendor)</span>
+            <span>+ تسجيل بائع وإنشاء عقد توكن</span>
           </Button>
 
           <Button
@@ -231,7 +231,7 @@ function ContractsPage() {
           <CardHeader className="px-6 py-4 border-b border-slate-800 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
               <FileText className="w-4 h-4 text-amber-400" />
-              <span>عقود الإيجار المبرمة ({contracts.length})</span>
+              <span>عقود الإيجار وروابط التوقيع ({contracts.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
@@ -244,13 +244,14 @@ function ContractsPage() {
                     <th className="p-3">البائع</th>
                     <th className="p-3">الرف</th>
                     <th className="p-3">الإيجار</th>
-                    <th className="p-3">توقيع المستأجر</th>
-                    <th className="p-3 text-right">رابط التوقيع</th>
+                    <th className="p-3">حالة التوقيع</th>
+                    <th className="p-3 text-right">رابط التوقيع الخاص</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {contracts.map((c) => {
                     const vendorName = c.vendors?.name_ar || c.vendors?.name_en || "Vendor";
+                    const isSigned = c.status === "active" && !!c.signature_png_url;
                     return (
                       <tr key={c.id} className="hover:bg-slate-800/40">
                         <td className="p-3 font-semibold text-slate-100">{vendorName}</td>
@@ -259,15 +260,15 @@ function ContractsPage() {
                           {Number(c.monthly_rent || 0).toFixed(3)} BHD
                         </td>
                         <td className="p-3">
-                          {c.signature_png_url ? (
+                          {isSigned ? (
                             <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] flex items-center gap-1 w-fit">
                               <CheckCircle2 className="w-3 h-3" />
-                              <span>موقع (Active)</span>
+                              <span>موقع (ACTIVE)</span>
                             </Badge>
                           ) : (
                             <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] flex items-center gap-1 w-fit">
                               <Clock className="w-3 h-3" />
-                              <span>Draft</span>
+                              <span>PENDING SIGNATURE</span>
                             </Badge>
                           )}
                         </td>
@@ -275,11 +276,11 @@ function ContractsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-[10px] flex items-center gap-1"
-                            onClick={() => copySignatureLink(vendorName)}
+                            className="border-slate-700 bg-slate-800 text-amber-400 hover:bg-slate-700 text-[10px] flex items-center gap-1"
+                            onClick={() => copyTokenizedSignLink(c.signing_token, vendorName)}
                           >
                             <Copy className="w-3 h-3" />
-                            <span>رابط التوقيع</span>
+                            <span>نسخ رابط /sign</span>
                           </Button>
                         </td>
                       </tr>
@@ -345,13 +346,13 @@ function ContractsPage() {
         </Card>
       </div>
 
-      {/* Modal: Onboard Vendor & Generate Contract */}
+      {/* Modal: Onboard Vendor & Generate Tokenized Contract */}
       <Dialog open={isOnboardModalOpen} onOpenChange={setIsOnboardModalOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
               <Store className="w-5 h-5 text-amber-400" />
-              <span>تسجيل بائع جديد وإنشاء عقد الإيجار</span>
+              <span>تسجيل بائع وإنشاء رابط توقيع العقد</span>
             </DialogTitle>
           </DialogHeader>
 
@@ -469,7 +470,7 @@ function ContractsPage() {
                 disabled={isSaving}
                 className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
               >
-                {isSaving ? "جاري التسجيل..." : "تسجيل البائع وإنشاء العقد"}
+                {isSaving ? "جاري التوليد..." : "إنشاء العقد وتوليد رابط التوقيع"}
               </Button>
             </DialogFooter>
           </form>

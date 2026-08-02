@@ -27,6 +27,8 @@ import { Route as SlugWishlistRouteImport } from './routes/$slug.wishlist'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
 import { Route as PlatformFilenameRouteImport } from './routes/platform.$filename'
+import { Route as VendorDashboardRouteImport } from './routes/vendor.dashboard'
+import { Route as VendorSignRouteImport } from './routes/vendor.sign'
 import { Route as SlugPageIdxRouteImport } from './routes/$slug.page.$idx'
 import { Route as SlugProductSplatRouteImport } from './routes/$slug.product.$'
 import { Route as SlugProductIdRouteImport } from './routes/$slug.product.$id'
@@ -163,6 +165,16 @@ const InvoiceIdRoute = InvoiceIdRouteImport.update({
 const PlatformFilenameRoute = PlatformFilenameRouteImport.update({
   id: '/platform/$filename',
   path: '/platform/$filename',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorDashboardRoute = VendorDashboardRouteImport.update({
+  id: '/vendor/dashboard',
+  path: '/vendor/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorSignRoute = VendorSignRouteImport.update({
+  id: '/vendor/sign',
+  path: '/vendor/sign',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugPageIdxRoute = SlugPageIdxRouteImport.update({
@@ -463,6 +475,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/invoice/$id': typeof InvoiceIdRoute
   '/platform/$filename': typeof PlatformFilenameRoute
+  '/vendor/dashboard': typeof VendorDashboardRoute
+  '/vendor/sign': typeof VendorSignRoute
   '/$slug/': typeof SlugIndexRoute
   '/$slug/page/$idx': typeof SlugPageIdxRoute
   '/$slug/product/$': typeof SlugProductSplatRoute
@@ -528,6 +542,8 @@ export interface FileRoutesByTo {
   '/$slug/wishlist': typeof SlugWishlistRoute
   '/invoice/$id': typeof InvoiceIdRoute
   '/platform/$filename': typeof PlatformFilenameRoute
+  '/vendor/dashboard': typeof VendorDashboardRoute
+  '/vendor/sign': typeof VendorSignRoute
   '/$slug': typeof SlugIndexRoute
   '/$slug/page/$idx': typeof SlugPageIdxRoute
   '/$slug/product/$': typeof SlugProductSplatRoute
@@ -596,6 +612,8 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/invoice/$id': typeof InvoiceIdRoute
   '/platform/$filename': typeof PlatformFilenameRoute
+  '/vendor/dashboard': typeof VendorDashboardRoute
+  '/vendor/sign': typeof VendorSignRoute
   '/$slug/': typeof SlugIndexRoute
   '/$slug/page/$idx': typeof SlugPageIdxRoute
   '/$slug/product/$': typeof SlugProductSplatRoute
@@ -665,6 +683,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/invoice/$id'
     | '/platform/$filename'
+    | '/vendor/dashboard'
+    | '/vendor/sign'
     | '/$slug/'
     | '/$slug/page/$idx'
     | '/$slug/product/$'
@@ -730,6 +750,8 @@ export interface FileRouteTypes {
     | '/$slug/wishlist'
     | '/invoice/$id'
     | '/platform/$filename'
+    | '/vendor/dashboard'
+    | '/vendor/sign'
     | '/$slug'
     | '/$slug/page/$idx'
     | '/$slug/product/$'
@@ -797,6 +819,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/invoice/$id'
     | '/platform/$filename'
+    | '/vendor/dashboard'
+    | '/vendor/sign'
     | '/$slug/'
     | '/$slug/page/$idx'
     | '/$slug/product/$'
@@ -858,6 +882,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   InvoiceIdRoute: typeof InvoiceIdRoute
   PlatformFilenameRoute: typeof PlatformFilenameRoute
+  VendorDashboardRoute: typeof VendorDashboardRoute
+  VendorSignRoute: typeof VendorSignRoute
   ApiCronCleanupBenefitReceiptsRoute: typeof ApiCronCleanupBenefitReceiptsRoute
   ApiCronProcessRentDeductionsRoute: typeof ApiCronProcessRentDeductionsRoute
   ApiOrdersStatusRoute: typeof ApiOrdersStatusRoute
@@ -993,6 +1019,20 @@ declare module '@tanstack/react-router' {
       path: '/platform/$filename'
       fullPath: '/platform/$filename'
       preLoaderRoute: typeof PlatformFilenameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendor/dashboard': {
+      id: '/vendor/dashboard'
+      path: '/vendor/dashboard'
+      fullPath: '/vendor/dashboard'
+      preLoaderRoute: typeof VendorDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendor/sign': {
+      id: '/vendor/sign'
+      path: '/vendor/sign'
+      fullPath: '/vendor/sign'
+      preLoaderRoute: typeof VendorSignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug/page/$idx': {
@@ -1527,6 +1567,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   InvoiceIdRoute: InvoiceIdRoute,
   PlatformFilenameRoute: PlatformFilenameRoute,
+  VendorDashboardRoute: VendorDashboardRoute,
+  VendorSignRoute: VendorSignRoute,
   ApiCronCleanupBenefitReceiptsRoute: ApiCronCleanupBenefitReceiptsRoute,
   ApiCronProcessRentDeductionsRoute: ApiCronProcessRentDeductionsRoute,
   ApiOrdersStatusRoute: ApiOrdersStatusRoute,
