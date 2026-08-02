@@ -30,7 +30,7 @@ export function KpiCard({
   return (
     <article
       className={cn(
-        "group rounded-2xl border border-black/[.07] bg-white p-5 shadow-[0_14px_38px_-30px_rgba(43,23,25,.5)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-28px_rgba(43,23,25,.5)]",
+        "group rounded-2xl border border-black/[.07] bg-white p-3.5 sm:p-5 shadow-[0_14px_38px_-30px_rgba(43,23,25,.5)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-28px_rgba(43,23,25,.5)]",
         className,
       )}
     >
@@ -41,7 +41,7 @@ export function KpiCard({
         {icon && (
           <div
             className={cn(
-              "grid h-10 w-10 shrink-0 place-items-center rounded-xl [&>svg]:h-5 [&>svg]:w-5",
+              "grid h-9 w-9 sm:h-10 sm:w-10 shrink-0 place-items-center rounded-xl [&>svg]:h-4.5 [&>svg]:w-4.5 sm:[&>svg]:h-5 sm:[&>svg]:w-5",
               accents[accent],
             )}
           >
@@ -49,7 +49,7 @@ export function KpiCard({
           </div>
         )}
       </div>
-      <div className="mt-4 text-[1.75rem] font-semibold leading-none tracking-tight text-[#24191a] tabular-nums">
+      <div className="mt-3 text-[1.35rem] sm:mt-4 sm:text-[1.75rem] font-semibold leading-none tracking-tight text-[#24191a] tabular-nums">
         {value}
       </div>
       <div className="mt-3 flex min-h-5 items-center gap-2">

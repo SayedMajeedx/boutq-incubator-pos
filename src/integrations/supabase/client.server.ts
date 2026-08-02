@@ -71,10 +71,7 @@ function getEnvSync(name: string): string | undefined {
 }
 
 function createSupabaseAdminClient() {
-  let SUPABASE_URL =
-    getEnvSync("SUPABASE_URL") ||
-    getEnvSync("VITE_SUPABASE_URL") ||
-    "https://ikciahnuqhemvnyfvbyp.supabase.co";
+  let SUPABASE_URL = getEnvSync("SUPABASE_URL") || getEnvSync("VITE_SUPABASE_URL");
   if (SUPABASE_URL && !SUPABASE_URL.startsWith("http://") && !SUPABASE_URL.startsWith("https://")) {
     SUPABASE_URL = `https://${SUPABASE_URL}`;
   }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { importProductCatalog } from "@/lib/universal-importer";
 import {
@@ -57,6 +57,11 @@ import {
   Image as ImageIcon,
   Sliders,
   X,
+  Zap,
+  Barcode,
+  TableProperties,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/format";
@@ -83,6 +88,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { parseVariantPrompt, type VariantGenerationPlan } from "@/lib/generate-variants.functions";
 import { OptimizedVideo, ResponsiveImage } from "@/components/responsive-media";
+import { InventoryCommandHeader } from "@/components/inventory/InventoryCommandHeader";
+import {
+  InventoryScopeSwitcher,
+  type InventoryScopeTab,
+} from "@/components/inventory/InventoryScopeSwitcher";
+import { InventoryToolbar } from "@/components/inventory/InventoryToolbar";
+import { InventoryWorkQueue } from "@/components/inventory/InventoryWorkQueue";
+import { InventoryMobileCard } from "@/components/inventory/InventoryMobileCard";
 
 /** Common measurement units the admin can pick from for a "size" variant. */
 const SIZE_UNITS = ["", "cm", "mm", "m", "inch", "ft", "kg", "g", "ml", "l"] as const;
@@ -279,12 +292,12 @@ function Inventory() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 pb-4 pt-7 sm:p-6 lg:p-8 animate-fade-in">
+    <div className="mx-auto max-w-7xl space-y-4 p-1 sm:p-2 animate-fade-in">
       <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300 sm:text-4xl">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300 sm:text-4xl">
             {t("inventory.title")}
-          </h1>
+          </h2>
           <p className="mt-1.5 text-muted-foreground text-sm max-w-md">{t("inventory.subtitle")}</p>
         </div>
       </div>
@@ -406,9 +419,11 @@ const PRODUCT_HEADER_MAPS = {
 function ProductImporterModal({
   brandId,
   onComplete,
+  renderTrigger,
 }: {
   brandId: string;
   onComplete: () => void;
+  renderTrigger?: (onClick: () => void) => React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<"preset" | "mapper" | "importing" | "success">("preset");
@@ -428,6 +443,11 @@ function ProductImporterModal({
   const [totalCount, setTotalCount] = useState(0);
   const { lang } = useI18n();
   const isAr = lang === "ar";
+
+  const handleOpen = () => {
+    setIsOpen(true);
+    setStep("preset");
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -653,17 +673,18 @@ function ProductImporterModal({
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsOpen(true);
-          setStep("preset");
-        }}
-        className="border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all text-primary"
-      >
-        <Sparkles className="h-4 w-4 me-2 animate-pulse text-amber-500" />
-        {isAr ? "استيراد كتالوج المنتجات" : "Import Products"}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger(handleOpen)
+      ) : (
+        <Button
+          variant="outline"
+          onClick={handleOpen}
+          className="border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all text-primary"
+        >
+          <Sparkles className="h-4 w-4 me-2 animate-pulse text-amber-500" />
+          {isAr ? "استيراد كتالوج المنتجات" : "Import Products"}
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-xl border-zinc-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
@@ -881,9 +902,11 @@ function ProductImporterModal({
 function InstagramImporterModal({
   brandId,
   onComplete,
+  renderTrigger,
 }: {
   brandId: string;
   onComplete: () => void;
+  renderTrigger?: (onClick: () => void) => React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<"inputs" | "grid" | "importing" | "success">("inputs");
@@ -898,6 +921,13 @@ function InstagramImporterModal({
   const [fetchStatus, setFetchStatus] = useState("");
   const { lang } = useI18n();
   const isAr = lang === "ar";
+
+  const handleOpen = () => {
+    setIsOpen(true);
+    setStep("inputs");
+    setUsername("");
+    setUrlsUrlsText("");
+  };
 
   const handleFetchPosts = async () => {
     setLoadingPosts(true);
@@ -1078,19 +1108,18 @@ function InstagramImporterModal({
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsOpen(true);
-          setStep("inputs");
-          setUsername("");
-          setUrlsUrlsText("");
-        }}
-        className="border-purple-200 dark:border-purple-900/50 hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 text-purple-600 dark:text-purple-400 transition-all font-semibold"
-      >
-        <Instagram className="h-4 w-4 me-2 text-purple-500 animate-pulse" />
-        {isAr ? "استيراد كتالوج انستقرام (ذكاء اصطناعي)" : "✨ Build Catalog from Instagram (AI)"}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger(handleOpen)
+      ) : (
+        <Button
+          variant="outline"
+          onClick={handleOpen}
+          className="border-purple-200 dark:border-purple-900/50 hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 text-purple-600 dark:text-purple-400 transition-all font-semibold"
+        >
+          <Instagram className="h-4 w-4 me-2 text-purple-500 animate-pulse" />
+          {isAr ? "استيراد كتالوج انستقرام (ذكاء اصطناعي)" : "✨ Build Catalog from Instagram (AI)"}
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-zinc-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-2xl p-6 sm:p-8">
@@ -1470,14 +1499,17 @@ function ProductsSection({
   };
 
   const isAr = useI18n().lang === "ar";
-  const productStock = (productId: string) =>
-    variants
-      .filter((variant) => variant.product_id === productId)
-      .reduce(
-        (sum, variant) =>
-          sum + Number(variant.stock_main || 0) + Number(variant.stock_incubator || 0),
-        0,
-      );
+  const productStock = useCallback(
+    (productId: string) =>
+      variants
+        .filter((variant) => variant.product_id === productId)
+        .reduce(
+          (sum, variant) =>
+            sum + Number(variant.stock_main || 0) + Number(variant.stock_incubator || 0),
+          0,
+        ),
+    [variants],
+  );
   const normalizedSearch = search.trim().toLowerCase();
   const filteredProducts = products.filter((product) => {
     const productVariants = variants.filter((variant) => variant.product_id === product.id);
@@ -1568,282 +1600,288 @@ function ProductsSection({
     printLabels(labels);
   };
 
+  const variantsByProduct = useMemo(() => {
+    const map: Record<string, Variant[]> = {};
+    variants.forEach((v) => {
+      if (!map[v.product_id]) map[v.product_id] = [];
+      map[v.product_id].push(v);
+    });
+    return map;
+  }, [variants]);
+
+  const [scopeFilter, setScopeFilter] = useState<"all" | "low" | "out" | "featured" | "inactive">(
+    "all",
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
+
+  const scopeTabs: InventoryScopeTab[] = [
+    {
+      id: "all",
+      label_en: "All Products",
+      label_ar: "جميع المنتجات",
+      count: products.length,
+      icon: Package,
+    },
+    {
+      id: "low",
+      label_en: "Low Stock",
+      label_ar: "مخزون منخفض",
+      count: lowStock,
+      icon: AlertTriangle,
+    },
+    {
+      id: "out",
+      label_en: "Out of Stock",
+      label_ar: "نفد المخزون",
+      count: products.filter((p) => productStock(p.id) === 0).length,
+      icon: Boxes,
+    },
+    {
+      id: "featured",
+      label_en: "Featured / Trending",
+      label_ar: "مميز ومطلوب",
+      count: products.filter((p) => p.featured_trending).length,
+      icon: TrendingUp,
+    },
+    {
+      id: "inactive",
+      label_en: "Inactive / Hidden",
+      label_ar: "مخفي وغير نشط",
+      count: products.filter((p) => !p.is_active).length,
+      icon: Search,
+    },
+  ];
+
+  const categoryOptions = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    products.forEach((p) => {
+      if (p.category) categoriesSet.add(p.category);
+    });
+    return Array.from(categoriesSet).map((c) => ({ id: c, name: c, name_ar: c }));
+  }, [products]);
+
+  const filteredDisplayProducts = useMemo(() => {
+    const result = products.filter((product) => {
+      const productVariants = variantsByProduct[product.id] || [];
+      const searchable = [
+        product.name,
+        product.name_ar,
+        product.name_en,
+        product.category,
+        ...productVariants.flatMap((variant) => [
+          variant.sku,
+          variant.barcode,
+          variant.size,
+          variant.color,
+        ]),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const stock = productStock(product.id);
+      const matchesSearch = !normalizedSearch || searchable.includes(normalizedSearch);
+      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+
+      let matchesScope = true;
+      if (scopeFilter === "low") matchesScope = stock > 0 && stock <= 5;
+      else if (scopeFilter === "out") matchesScope = stock === 0;
+      else if (scopeFilter === "featured") matchesScope = Boolean(product.featured_trending);
+      else if (scopeFilter === "inactive") matchesScope = !product.is_active;
+
+      return matchesSearch && matchesCategory && matchesScope;
+    });
+
+    if (sortBy === "price-asc") {
+      result.sort((a, b) => (a.base_price || 0) - (b.base_price || 0));
+    } else if (sortBy === "price-desc") {
+      result.sort((a, b) => (b.base_price || 0) - (a.base_price || 0));
+    } else if (sortBy === "stock-asc") {
+      result.sort((a, b) => productStock(a.id) - productStock(b.id));
+    }
+
+    return result;
+  }, [
+    products,
+    variantsByProduct,
+    normalizedSearch,
+    selectedCategory,
+    scopeFilter,
+    sortBy,
+    productStock,
+  ]);
+
+  const activeFilterCount = (selectedCategory !== "all" ? 1 : 0) + (search ? 1 : 0);
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
-        {[
-          [Package, isAr ? "المنتجات" : "Products", products.length],
-          [Boxes, isAr ? "إجمالي الوحدات" : "Total units", totalUnits],
-          [AlertTriangle, isAr ? "مخزون منخفض" : "Low stock", lowStock],
-          [TrendingUp, isAr ? "بضائع راكدة" : "Dead Stock Items", deadStock],
-        ].map(([Icon, label, value], index) => {
-          const StatIcon = Icon as typeof Package;
-          return (
-            <Card
-              key={index}
-              className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card/40 p-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md lg:rounded-2xl lg:p-4"
+    <div className="space-y-3.5">
+      {/* 1. Integrated Command Header */}
+      <InventoryCommandHeader
+        lang={isAr ? "ar" : "en"}
+        productCount={products.length}
+        isCourier={false}
+        onCreateNew={() => {
+          setEditing(null);
+          setDialogSession((v) => v + 1);
+          setOpen(true);
+        }}
+        renderImporters={
+          <div className="flex flex-col gap-1 p-1">
+            <InstagramImporterModal brandId={brandId} onComplete={onChanged} />
+            <ProductImporterModal brandId={brandId} onComplete={onChanged} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={printAll}
+              className="justify-start text-xs font-semibold"
             >
-              <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-                <div
-                  className={`shrink-0 rounded-lg p-2 lg:rounded-xl lg:p-3 ${index >= 2 && Number(value) > 0 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-primary/10 text-primary"}`}
-                >
-                  <StatIcon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="line-clamp-2 text-xs leading-tight text-muted-foreground">
-                    {String(label)}
-                  </p>
-                  <p className="mt-0.5 font-display text-xl font-bold lg:text-2xl">
-                    {String(value)}
-                  </p>
-                </div>
-              </div>
-            </Card>
+              <Printer className="h-3.5 w-3.5 me-2" />
+              {isAr ? "طباعة جميع الباركودات" : "Print All Barcodes"}
+            </Button>
+          </div>
+        }
+      />
+
+      {/* 2. Operational Scope Switcher */}
+      <InventoryScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        tabs={scopeTabs}
+        activeTab={scopeFilter}
+        onTabChange={(tabId) => setScopeFilter(tabId as any)}
+      />
+
+      {/* 3. Compact Command Toolbar */}
+      <InventoryToolbar
+        lang={isAr ? "ar" : "en"}
+        search={search}
+        onSearchChange={setSearch}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        categories={categoryOptions}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        activeFilterCount={activeFilterCount}
+        onClearFilters={() => {
+          setSearch("");
+          setSelectedCategory("all");
+          setScopeFilter("all");
+        }}
+      />
+
+      {/* 4. Mobile Purpose-Built Product Cards */}
+      <div className="space-y-3 block sm:hidden">
+        {filteredDisplayProducts.map((p) => {
+          const pVariants = variantsByProduct[p.id] || [];
+          const totalStock = productStock(p.id);
+          const minPrice =
+            pVariants.length > 0
+              ? Math.min(...pVariants.map((v) => Number(v.selling_price || 0)))
+              : Number(p.base_price || 0);
+
+          return (
+            <InventoryMobileCard
+              key={p.id}
+              lang={isAr ? "ar" : "en"}
+              product={p}
+              variants={pVariants}
+              totalStock={totalStock}
+              minPrice={minPrice}
+              onEdit={(prod) => {
+                setEditing(prod);
+                setDialogSession((v) => v + 1);
+                setOpen(true);
+              }}
+              onDelete={(id) => del(id)}
+              onPrintLabel={(prod) => {
+                const labels: LabelData[] = (variantsByProduct[prod.id] || [])
+                  .filter((v) => Boolean(v.barcode))
+                  .map((v) => ({
+                    code: v.barcode!,
+                    productName: prod.name,
+                    size: v.size,
+                    color: v.color,
+                    price: v.selling_price,
+                    businessName,
+                  }));
+                if (labels.length > 0) printLabels(labels);
+                else
+                  toast.error(isAr ? "لا يوجد باركود لهذا المنتج" : "No barcode for this product");
+              }}
+              renderVariantList={(prod) => (
+                <VariantList
+                  productId={prod.id}
+                  productName={prod.name}
+                  businessName={businessName}
+                  variants={variantsByProduct[prod.id] || []}
+                  onChanged={onChanged}
+                  salesByVariant={salesByVariant}
+                  product={prod}
+                />
+              )}
+            />
           );
         })}
       </div>
 
-      <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-3 shadow-md backdrop-blur-sm sm:p-5">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(220px,1fr)_160px_170px] sm:gap-4">
-          <div className="relative col-span-2 sm:col-span-1">
-            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="ps-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={
-                isAr ? "ابحث بالمنتج أو SKU أو الباركود" : "Search product, SKU, or barcode"
-              }
-            />
-          </div>
-          <Select
-            value={stockFilter}
-            onValueChange={(value: "all" | "low" | "out") => setStockFilter(value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isAr ? "كل المخزون" : "All stock"}</SelectItem>
-              <SelectItem value="low">{isAr ? "مخزون منخفض" : "Low stock"}</SelectItem>
-              <SelectItem value="out">{isAr ? "نفد المخزون" : "Out of stock"}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={visibilityFilter}
-            onValueChange={(value: "all" | "active" | "hidden") => setVisibilityFilter(value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isAr ? "كل المنتجات" : "All visibility"}</SelectItem>
-              <SelectItem value="active">
-                {isAr ? "ظاهر في المتجر" : "Storefront active"}
-              </SelectItem>
-              <SelectItem value="hidden">{isAr ? "مخفي" : "Hidden"}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          {filteredProducts.length} / {products.length}{" "}
-          {isAr ? "منتجات مطابقة" : "matching products"}
-        </p>
-      </Card>
-
-      <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-row sm:justify-end sm:gap-3 [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-0 [&_button]:w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:px-2 [&_button]:text-center [&_button]:text-xs [&_button]:leading-tight sm:[&_button]:h-10 sm:[&_button]:min-h-0 sm:[&_button]:w-auto sm:[&_button]:whitespace-nowrap sm:[&_button]:px-4 sm:[&_button]:text-sm">
-        <InstagramImporterModal brandId={brandId} onComplete={onChanged} />
-        <ProductImporterModal brandId={brandId} onComplete={onChanged} />
-        <Button
-          variant="outline"
-          onClick={printAll}
-          className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-        >
-          <Printer className="h-4 w-4 me-2" /> {isAr ? "طباعة كل الباركودات" : "Print all barcodes"}
-        </Button>
-        <Dialog
-          open={open}
-          onOpenChange={(v) => {
-            setOpen(v);
-            if (!v) setEditing(null);
+      {/* 5. Desktop High-Density Work Queue */}
+      <div className="hidden sm:block">
+        <InventoryWorkQueue
+          lang={isAr ? "ar" : "en"}
+          products={filteredDisplayProducts}
+          variantsByProduct={variantsByProduct}
+          isLoading={false}
+          isError={false}
+          onEdit={(prod) => {
+            setEditing(prod);
+            setDialogSession((v) => v + 1);
+            setOpen(true);
           }}
-        >
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setDialogSession((value) => value + 1);
-              }}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-            >
-              <Plus className="h-4 w-4 me-2" /> {t("inventory.newProduct")}
-            </Button>
-          </DialogTrigger>
-          <ProductDialog
-            key={`${editing?.id ?? "new"}-${dialogSession}`}
-            product={editing}
-            onSaved={() => {
-              setOpen(false);
-              setEditing(null);
-              onChanged();
-            }}
-          />
-        </Dialog>
+          onDelete={(id) => del(id)}
+          onPrintLabel={(prod) => {
+            const labels: LabelData[] = (variantsByProduct[prod.id] || [])
+              .filter((v) => Boolean(v.barcode))
+              .map((v) => ({
+                code: v.barcode!,
+                productName: prod.name,
+                size: v.size,
+                color: v.color,
+                price: v.selling_price,
+                businessName,
+              }));
+            if (labels.length > 0) printLabels(labels);
+            else toast.error(isAr ? "لا يوجد باركود لهذا المنتج" : "No barcode for this product");
+          }}
+          renderVariantList={(prod) => (
+            <VariantList
+              productId={prod.id}
+              productName={prod.name}
+              businessName={businessName}
+              variants={variantsByProduct[prod.id] || []}
+              onChanged={onChanged}
+              salesByVariant={salesByVariant}
+              product={prod}
+            />
+          )}
+        />
       </div>
 
-      {products.length === 0 ? (
-        <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-12 text-center">
-          <Package className="h-10 w-10 mx-auto text-muted-foreground mb-3 animate-pulse" />
-          <p className="text-muted-foreground">{t("inventory.none")}</p>
-        </Card>
-      ) : filteredProducts.length === 0 ? (
-        <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-10 text-center">
-          <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground animate-pulse" />
-          <p className="font-medium text-lg">
-            {isAr ? "لا توجد منتجات مطابقة" : "No matching products"}
-          </p>
-          <Button
-            variant="ghost"
-            className="mt-4 shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-            onClick={() => {
-              setSearch("");
-              setStockFilter("all");
-              setVisibilityFilter("all");
-            }}
-          >
-            {isAr ? "مسح عوامل التصفية" : "Clear filters"}
-          </Button>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredProducts.map((p) => {
-            const pVariants = variants.filter((v) => v.product_id === p.id);
-            const stockTotal = pVariants.reduce(
-              (s, v) => s + Number(v.stock_main || 0) + Number(v.stock_incubator || 0),
-              0,
-            );
-            const prices = pVariants
-              .map((v) => Number(v.selling_price || 0))
-              .filter(Number.isFinite);
-            const isExpanded = !!expandedProducts[p.id];
-
-            return (
-              <Card
-                key={p.id}
-                className="overflow-hidden border border-border/60 shadow-md rounded-2xl bg-card/40 backdrop-blur-sm p-4 sm:p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:scale-[1.005] cursor-pointer"
-                onClick={() => toggleProduct(p.id)}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex gap-4 flex-1 min-w-0">
-                    {p.image_url && (
-                      <img
-                        src={p.image_url}
-                        alt={p.name}
-                        className="w-12 h-14 sm:w-20 sm:h-24 object-cover rounded-md border border-border shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base sm:text-lg font-display truncate">
-                          {(isAr ? p.name_ar || p.name_en : p.name_en || p.name_ar) || p.name}
-                        </h3>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${p.is_active ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}
-                        >
-                          {p.is_active ? (isAr ? "ظاهر" : "Active") : isAr ? "مخفي" : "Hidden"}
-                        </span>
-                      </div>
-                      {p.category && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{p.category}</p>
-                      )}
-
-                      {isExpanded &&
-                        (() => {
-                          const desc = isAr
-                            ? p.description_ar || p.description_en
-                            : p.description_en || p.description_ar;
-                          const fallback = desc || p.description;
-                          return fallback ? (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {fallback}
-                            </p>
-                          ) : null;
-                        })()}
-
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                            stockTotal <= 0
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
-                              : stockTotal <= 5
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          }`}
-                        >
-                          {stockTotal <= 0
-                            ? isAr
-                              ? "نفد المخزون"
-                              : "Out of stock"
-                            : `${stockTotal} ${t("inventory.inStock")}`}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {pVariants.length} {t("inventory.variantsCount")}
-                        </span>
-                        {prices.length > 0 && (
-                          <span className="font-medium text-foreground bg-secondary/50 px-2 py-0.5 rounded-sm">
-                            {formatMoney(Math.min(...prices), currency)}
-                            {Math.max(...prices) !== Math.min(...prices)
-                              ? ` – ${formatMoney(Math.max(...prices), currency)}`
-                              : ""}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          setEditing(p);
-                          setDialogSession((value) => value + 1);
-                          setOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <InventoryDeleteAction
-                        message={t("common.confirmDelete")}
-                        onConfirm={() => del(p.id)}
-                      />
-                    </div>
-                    <ChevronDown
-                      className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                    />
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <VariantList
-                      productId={p.id}
-                      productName={p.name}
-                      businessName={businessName}
-                      variants={pVariants}
-                      onChanged={onChanged}
-                      salesByVariant={salesByVariant}
-                      product={p}
-                    />
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
+      >
+        <ProductDialog
+          key={`${editing?.id ?? "new"}-${dialogSession}`}
+          product={editing}
+          onSaved={() => {
+            setOpen(false);
+            setEditing(null);
+            onChanged();
+          }}
+        />
+      </Dialog>
     </div>
   );
 }
@@ -2043,7 +2081,7 @@ function ProductDialog({ product, onSaved }: { product: Product | null; onSaved:
       variant_label_fabric_en: product?.variant_label_fabric_en ?? "",
     });
     setActiveDialogTab("basic");
-  }, [product?.id]);
+  }, [product]);
 
   const categoriesQ = useQuery({
     queryKey: ["categories", brand.id],
@@ -3565,26 +3603,29 @@ function PremiumCurrencyInput({
   onChange,
   onBlur,
   className = "",
+  placeholder = "0.000",
 }: {
   value: string;
   onChange: (val: string) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   className?: string;
+  placeholder?: string;
 }) {
   return (
     <div
-      className="relative inline-flex items-center w-full max-w-[105px] shrink-0"
+      className="relative inline-flex items-center w-full min-w-[115px] max-w-[130px] shrink-0"
       onClick={(e) => e.stopPropagation()}
     >
       <input
         type="number"
         step="0.001"
-        className={`w-full h-9 pl-2 pr-7 text-center font-bold bg-background border border-input rounded-lg outline-none focus:ring-1 focus:ring-primary text-xs ${className}`}
+        placeholder={placeholder}
+        className={`w-full h-9.5 pl-2.5 pr-8 text-center font-mono font-bold bg-background border border-input rounded-xl outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-xs shadow-2xs transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${className}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
       />
-      <span className="absolute right-2 text-[8px] font-black text-muted-foreground/50 pointer-events-none uppercase">
+      <span className="absolute end-2.5 text-[9px] font-black text-muted-foreground/60 pointer-events-none uppercase tracking-tight">
         BHD
       </span>
     </div>
@@ -3689,27 +3730,28 @@ function VariantDesktopRow({
       {/* Combined Variant Attributes */}
       <td className="px-2 py-3 text-start align-middle" onClick={(e) => e.stopPropagation()}>
         {isEditingAttrs ? (
-          <div className="flex flex-col gap-2 p-2 bg-secondary/40 border border-primary/25 rounded-xl max-w-[260px] shadow-sm animate-in fade-in duration-150">
-            <div className="grid grid-cols-2 gap-1.5">
+          <div className="flex flex-col gap-2.5 p-3 bg-card/95 backdrop-blur-md border border-primary/30 rounded-2xl w-[320px] sm:w-[350px] shadow-xl animate-in fade-in zoom-in-95 duration-150 relative z-40">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-[10px] font-bold text-muted-foreground">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                   {(isAr ? product?.variant_label_size_ar : product?.variant_label_size_en) ||
                     product?.variant_label_size_en ||
                     product?.variant_label_size_ar ||
                     (isAr ? "المقاس" : "Size")}
                 </span>
                 <input
-                  className="h-8 w-full px-2 rounded-md border border-input bg-background text-xs outline-none"
+                  className="h-9 w-full px-2.5 rounded-xl border border-input bg-background text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   value={sizeVal}
                   onChange={(e) => setSizeVal(e.target.value)}
+                  placeholder={isAr ? "المقاس" : "Size"}
                 />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-muted-foreground">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                   {isAr ? "الوحدة" : "Unit"}
                 </span>
                 <select
-                  className="h-8 w-full px-1.5 rounded-md border border-input bg-background text-xs outline-none"
+                  className="h-9 w-full px-2 rounded-xl border border-input bg-background text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   value={sizeUnitVal}
                   onChange={(e) => setSizeUnitVal(e.target.value)}
                 >
@@ -3721,49 +3763,58 @@ function VariantDesktopRow({
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-[10px] font-bold text-muted-foreground">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                   {(isAr ? product?.variant_label_color_ar : product?.variant_label_color_en) ||
                     product?.variant_label_color_en ||
                     product?.variant_label_color_ar ||
                     (isAr ? "اللون" : "Color")}
                 </span>
                 <input
-                  className="h-8 w-full px-2 rounded-md border border-input bg-background text-xs outline-none"
+                  className="h-9 w-full px-2.5 rounded-xl border border-input bg-background text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   value={colorVal}
                   onChange={(e) => setColorVal(e.target.value)}
+                  placeholder={isAr ? "اللون" : "Color"}
                 />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-muted-foreground">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
                   {(isAr ? product?.variant_label_fabric_ar : product?.variant_label_fabric_en) ||
                     product?.variant_label_fabric_en ||
                     product?.variant_label_fabric_ar ||
                     (isAr ? "الخامة" : "Fabric")}
                 </span>
                 <input
-                  className="h-8 w-full px-2 rounded-md border border-input bg-background text-xs outline-none"
+                  className="h-9 w-full px-2.5 rounded-xl border border-input bg-background text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   value={fabricVal}
                   onChange={(e) => setFabricVal(e.target.value)}
+                  placeholder={isAr ? "الخامة" : "Fabric"}
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-1.5 pt-1.5 border-t border-border/55 mt-1">
-              <button
-                type="button"
-                className="h-7 w-7 rounded-md hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center text-muted-foreground transition-colors"
-                onClick={() => setIsEditingAttrs(false)}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                className="h-7 w-7 rounded-md hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center text-muted-foreground transition-colors font-bold"
-                onClick={saveAttributes}
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
+            <div className="flex items-center justify-between pt-2 border-t border-border/60 mt-0.5">
+              <span className="text-[10px] text-muted-foreground font-medium">
+                {isAr ? "تعديل المتغير" : "Edit Variant Attributes"}
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 text-muted-foreground flex items-center gap-1 text-xs font-semibold transition-colors"
+                  onClick={() => setIsEditingAttrs(false)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>{isAr ? "إلغاء" : "Cancel"}</span>
+                </button>
+                <button
+                  type="button"
+                  className="h-8 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1 text-xs font-bold transition-all shadow-xs"
+                  onClick={saveAttributes}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>{isAr ? "حفظ" : "Save"}</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -3782,7 +3833,7 @@ function VariantDesktopRow({
                   </span>
                 )}
                 {v.fabric && (
-                  <span className="inline-flex items-center bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 text-xs font-semibold px-2 py-0.5 border border-zinc-200 dark:border-zinc-700 rounded-md">
+                  <span className="inline-flex items-center bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 text-xs font-semibold px-2 py-0.5 border border-zinc-200 dark:border-slate-700 rounded-md">
                     {v.fabric}
                   </span>
                 )}
@@ -3792,6 +3843,14 @@ function VariantDesktopRow({
                 {isAr ? "متغير قياسي" : "Standard Variant"}
               </span>
             )}
+
+            {!renderBarcodeCol && (v.barcode || v.sku) && (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground/85 bg-muted/70 px-1.5 py-0.5 rounded-md border border-border/60 shrink-0">
+                <Barcode className="h-3 w-3 text-primary/80" />
+                <span>{v.barcode || v.sku}</span>
+              </span>
+            )}
+
             <button
               type="button"
               className="p-1 rounded hover:bg-muted text-muted-foreground/60 hover:text-foreground opacity-0 group-hover/v:opacity-100 transition-opacity"
@@ -4398,7 +4457,9 @@ function VariantList({
   const barcodeLabel = isAr ? "الباركود" : "Barcode";
 
   // State for dynamic columns compacting / hiding
-  const [showAllCols, setShowAllCols] = useState(false);
+  type VariantViewMode = "quick" | "barcodes" | "full";
+  const [viewMode, setViewMode] = useState<VariantViewMode>("quick");
+
   const hasAnyImage = useMemo(
     () => variants.some((v) => v.image_url && v.image_url.trim()),
     [variants],
@@ -4409,10 +4470,9 @@ function VariantList({
     [variants],
   );
 
-  const renderImageCol = showAllCols || hasAnyImage;
-  const renderSkuCol = showAllCols || hasAnySku;
-  const renderBarcodeCol = showAllCols || hasAnyBarcode;
-  const hasHiddenCols = !hasAnyImage || !hasAnySku || !hasAnyBarcode;
+  const renderImageCol = viewMode === "full" || (viewMode === "barcodes" && hasAnyImage);
+  const renderSkuCol = viewMode === "full" || viewMode === "barcodes";
+  const renderBarcodeCol = viewMode === "full" || viewMode === "barcodes";
 
   // Selected state for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -4755,336 +4815,362 @@ function VariantList({
       </div>
 
       {/* Desktop Redesigned Table View */}
-      <div className="hidden w-full overflow-x-auto md:block border border-border/75 rounded-2xl shadow-sm bg-background">
-        <table
-          className="table-fixed text-sm w-full"
-          style={{ width: totalTableWidth, minWidth: "100%" }}
-        >
-          <colgroup>
-            <col style={{ width: 44 }} />
-            <col style={{ width: 270 }} />
-            {renderImageCol && <col style={{ width: 96 }} />}
-            {renderSkuCol && <col style={{ width: 120 }} />}
-            {renderBarcodeCol && <col style={{ width: 190 }} />}
-            {canViewFinancials && <col style={{ width: 110 }} />}
-            <col style={{ width: 110 }} />
-            <col style={{ width: 110 }} />
-            {canViewFinancials && <col style={{ width: 96 }} />}
-            <col style={{ width: 115 }} />
-            <col style={{ width: 115 }} />
-            <col style={{ width: 88 }} />
-            <col style={{ width: 60 }} />
-          </colgroup>
-          <thead>
-            <tr className="text-start text-xs uppercase tracking-wider border-b bg-muted/40 font-semibold text-muted-foreground">
-              <th className="px-2 py-3 text-center align-middle">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer transition-all"
-                  checked={isAllSelected}
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th className="px-2 py-3 text-start font-black text-[10px]">
-                {(() => {
-                  const sizeLbl =
-                    (isAr ? product?.variant_label_size_ar : product?.variant_label_size_en) ||
-                    product?.variant_label_size_en ||
-                    product?.variant_label_size_ar ||
-                    (isAr ? "المقاس" : "Size");
-                  const colorLbl =
-                    (isAr ? product?.variant_label_color_ar : product?.variant_label_color_en) ||
-                    product?.variant_label_color_en ||
-                    product?.variant_label_color_ar ||
-                    (isAr ? "اللون" : "Color");
-                  const fabricLbl =
-                    (isAr ? product?.variant_label_fabric_ar : product?.variant_label_fabric_en) ||
-                    product?.variant_label_fabric_en ||
-                    product?.variant_label_fabric_ar ||
-                    (isAr ? "الخامة" : "Fabric");
-                  return isAr
-                    ? `المتغير (${sizeLbl} / ${colorLbl} / ${fabricLbl})`
-                    : `Variant (${sizeLbl} / ${colorLbl} / ${fabricLbl})`;
-                })()}
-              </th>
-              {renderImageCol && (
-                <th className="px-2 py-3 text-center font-black text-[10px]">
-                  {isAr ? "الصورة" : "Image"}
-                </th>
-              )}
-              {renderSkuCol && (
-                <th className="px-2 py-3 text-start font-black text-[10px]">
-                  {t("inventory.sku")}
-                </th>
-              )}
-              {renderBarcodeCol && (
-                <th className="px-2 py-3 text-start font-black text-[10px]">{barcodeLabel}</th>
-              )}
-              {canViewFinancials && (
-                <th className="px-2 py-3 text-center font-black text-[10px]">
-                  {t("inventory.cost")}
-                </th>
-              )}
-              <th className="px-2 py-3 text-center font-black text-[10px]">
-                {isAr ? "سعر إضافي" : "Price Delta"}
-              </th>
-              <th className="px-2 py-3 text-center font-black text-[10px]">
-                {isAr ? "السعر الأصلي" : "Original Delta"}
-              </th>
-              {canViewFinancials && (
-                <th className="px-2 py-3 text-center font-black text-[10px]">
-                  {t("inventory.margin")}
-                </th>
-              )}
-              <th className="px-2 py-3 text-center font-black text-[10px]">{mainLabel}</th>
-              <th className="px-2 py-3 text-center font-black text-[10px]">{incLabel}</th>
-              <th className="px-2 py-3 text-center font-black text-[10px]">
-                {t("inventory.stock")}
-              </th>
-              <th aria-label={isAr ? "الإجراءات" : "Actions"}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {variants.map((v) => (
-              <VariantDesktopRow
-                key={v.id}
-                v={v}
-                canViewFinancials={canViewFinancials}
-                barcodeLabel={barcodeLabel}
-                SIZE_UNITS={SIZE_UNITS}
-                salesByVariant={salesByVariant}
-                t={t}
-                isAr={isAr}
-                brand={brand}
-                update={update}
-                productName={productName}
-                businessName={businessName}
-                genBarcode={genBarcode}
-                del={del}
-                isSelected={selectedIds.has(v.id)}
-                onToggleSelect={() => toggleSelect(v.id)}
-                renderImageCol={renderImageCol}
-                renderSkuCol={renderSkuCol}
-                renderBarcodeCol={renderBarcodeCol}
-                product={product}
-              />
-            ))}
+      <div className="hidden w-full md:block border border-border/75 rounded-2xl shadow-2xs bg-background overflow-hidden relative">
+        {/* View Mode Segmented Switcher Bar */}
+        <div className="flex items-center justify-between p-2 bg-muted/30 border-b border-border/60">
+          <div className="flex items-center gap-1.5 bg-background/80 p-1 rounded-xl border border-border/50 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode("quick")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === "quick"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              <span>{isAr ? "الأسعار والمخزون السريع" : "Quick Stock & Prices"}</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 ms-1">
+                {isAr ? "بدون تمرير" : "Zero Scroll"}
+              </span>
+            </button>
 
-            {/* Adding desktop row (perfect matching design) */}
-            {adding && (
-              <tr className="border-t border-border bg-secondary/30 animate-in fade-in duration-150">
-                <td></td>
-                {/* Variant (combined attributes inputs) */}
-                <td className="px-2 py-3">
-                  <div className="grid grid-cols-2 gap-1.5 max-w-[260px]">
-                    <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("barcodes")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === "barcodes"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <Barcode className="h-3.5 w-3.5" />
+              <span>{isAr ? "الباركود و SKU" : "Barcodes & SKUs"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("full")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                viewMode === "full"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <TableProperties className="h-3.5 w-3.5" />
+              <span>{isAr ? "المصفوفة الكاملة" : "Full Matrix"}</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] font-bold text-muted-foreground px-2">
+            {variants.length} {isAr ? "متغيرات" : "variants"}
+          </div>
+        </div>
+
+        <div className="w-full overflow-x-auto os-scrollbar">
+          <table className="w-full text-xs text-start border-collapse min-w-[700px]">
+            <thead>
+              <tr className="text-start text-xs uppercase tracking-wider border-b bg-muted/40 font-semibold text-muted-foreground">
+                <th className="px-2 py-3 text-center align-middle">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer transition-all"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="px-2 py-3 text-start font-black text-[10px]">
+                  {(() => {
+                    const sizeLbl =
+                      (isAr ? product?.variant_label_size_ar : product?.variant_label_size_en) ||
+                      product?.variant_label_size_en ||
+                      product?.variant_label_size_ar ||
+                      (isAr ? "المقاس" : "Size");
+                    const colorLbl =
+                      (isAr ? product?.variant_label_color_ar : product?.variant_label_color_en) ||
+                      product?.variant_label_color_en ||
+                      product?.variant_label_color_ar ||
+                      (isAr ? "اللون" : "Color");
+                    const fabricLbl =
+                      (isAr
+                        ? product?.variant_label_fabric_ar
+                        : product?.variant_label_fabric_en) ||
+                      product?.variant_label_fabric_en ||
+                      product?.variant_label_fabric_ar ||
+                      (isAr ? "الخامة" : "Fabric");
+                    return isAr
+                      ? `المتغير (${sizeLbl} / ${colorLbl} / ${fabricLbl})`
+                      : `Variant (${sizeLbl} / ${colorLbl} / ${fabricLbl})`;
+                  })()}
+                </th>
+                {renderImageCol && (
+                  <th className="px-2 py-3 text-center font-black text-[10px]">
+                    {isAr ? "الصورة" : "Image"}
+                  </th>
+                )}
+                {renderSkuCol && (
+                  <th className="px-2 py-3 text-start font-black text-[10px]">
+                    {t("inventory.sku")}
+                  </th>
+                )}
+                {renderBarcodeCol && (
+                  <th className="px-2 py-3 text-start font-black text-[10px]">{barcodeLabel}</th>
+                )}
+                {canViewFinancials && (
+                  <th className="px-2 py-3 text-center font-black text-[10px]">
+                    {t("inventory.cost")}
+                  </th>
+                )}
+                <th className="px-2 py-3 text-center font-black text-[10px]">
+                  {isAr ? "سعر إضافي" : "Price Delta"}
+                </th>
+                <th className="px-2 py-3 text-center font-black text-[10px]">
+                  {isAr ? "السعر الأصلي" : "Original Delta"}
+                </th>
+                {canViewFinancials && (
+                  <th className="px-2 py-3 text-center font-black text-[10px]">
+                    {t("inventory.margin")}
+                  </th>
+                )}
+                <th className="px-2 py-3 text-center font-black text-[10px]">{mainLabel}</th>
+                <th className="px-2 py-3 text-center font-black text-[10px]">{incLabel}</th>
+                <th className="px-2 py-3 text-center font-black text-[10px]">
+                  {t("inventory.stock")}
+                </th>
+                <th aria-label={isAr ? "الإجراءات" : "Actions"}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {variants.map((v) => (
+                <VariantDesktopRow
+                  key={v.id}
+                  v={v}
+                  canViewFinancials={canViewFinancials}
+                  barcodeLabel={barcodeLabel}
+                  SIZE_UNITS={SIZE_UNITS}
+                  salesByVariant={salesByVariant}
+                  t={t}
+                  isAr={isAr}
+                  brand={brand}
+                  update={update}
+                  productName={productName}
+                  businessName={businessName}
+                  genBarcode={genBarcode}
+                  del={del}
+                  isSelected={selectedIds.has(v.id)}
+                  onToggleSelect={() => toggleSelect(v.id)}
+                  renderImageCol={renderImageCol}
+                  renderSkuCol={renderSkuCol}
+                  renderBarcodeCol={renderBarcodeCol}
+                  product={product}
+                />
+              ))}
+
+              {/* Adding desktop row (perfect matching design) */}
+              {adding && (
+                <tr className="border-t border-border bg-secondary/30 animate-in fade-in duration-150">
+                  <td></td>
+                  {/* Variant (combined attributes inputs) */}
+                  <td className="px-2 py-3">
+                    <div className="grid grid-cols-2 gap-1.5 max-w-[320px]">
+                      <div className="flex gap-1">
+                        <Input
+                          className="h-8 w-16 text-start text-xs font-semibold"
+                          value={row.size}
+                          onChange={(e) => setRow({ ...row, size: e.target.value })}
+                          placeholder={
+                            (isAr
+                              ? product?.variant_label_size_ar
+                              : product?.variant_label_size_en) ||
+                            product?.variant_label_size_en ||
+                            product?.variant_label_size_ar ||
+                            "Size"
+                          }
+                        />
+                        <select
+                          className="h-8 rounded border border-input bg-background px-1 text-xs outline-none"
+                          value={row.size_unit}
+                          onChange={(e) => setRow({ ...row, size_unit: e.target.value })}
+                        >
+                          {SIZE_UNITS.map((u) => (
+                            <option key={u} value={u}>
+                              {u === "" ? "—" : u}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <Input
-                        className="h-8 w-16 text-start text-xs font-semibold"
-                        value={row.size}
-                        onChange={(e) => setRow({ ...row, size: e.target.value })}
+                        className="h-8 w-full text-xs font-semibold"
+                        value={row.color}
+                        onChange={(e) => setRow({ ...row, color: e.target.value })}
                         placeholder={
                           (isAr
-                            ? product?.variant_label_size_ar
-                            : product?.variant_label_size_en) ||
-                          product?.variant_label_size_en ||
-                          product?.variant_label_size_ar ||
-                          "Size"
+                            ? product?.variant_label_color_ar
+                            : product?.variant_label_color_en) ||
+                          product?.variant_label_color_en ||
+                          product?.variant_label_color_ar ||
+                          "Color"
                         }
                       />
-                      <select
-                        className="h-8 rounded border border-input bg-background px-1 text-xs outline-none"
-                        value={row.size_unit}
-                        onChange={(e) => setRow({ ...row, size_unit: e.target.value })}
-                      >
-                        {SIZE_UNITS.map((u) => (
-                          <option key={u} value={u}>
-                            {u === "" ? "—" : u}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Input
-                      className="h-8 w-full text-xs font-semibold"
-                      value={row.color}
-                      onChange={(e) => setRow({ ...row, color: e.target.value })}
-                      placeholder={
-                        (isAr
-                          ? product?.variant_label_color_ar
-                          : product?.variant_label_color_en) ||
-                        product?.variant_label_color_en ||
-                        product?.variant_label_color_ar ||
-                        "Color"
-                      }
-                    />
-                    <Input
-                      className="h-8 w-full text-xs font-semibold col-span-2"
-                      value={row.fabric}
-                      onChange={(e) => setRow({ ...row, fabric: e.target.value })}
-                      placeholder={
-                        (isAr
-                          ? product?.variant_label_fabric_ar
-                          : product?.variant_label_fabric_en) ||
-                        product?.variant_label_fabric_en ||
-                        product?.variant_label_fabric_ar ||
-                        "Fabric"
-                      }
-                    />
-                  </div>
-                </td>
-
-                {/* Optional Image */}
-                {renderImageCol && (
-                  <td className="px-2 py-3 text-center">
-                    <div className="flex justify-center">
-                      <VariantImageUploader
-                        brandId={brand.id}
-                        imageUrl={row.image_url}
-                        onChange={(url) => setRow({ ...row, image_url: url || "" })}
-                        isAr={isAr}
-                      />
-                    </div>
-                  </td>
-                )}
-
-                {/* SKU */}
-                {renderSkuCol && (
-                  <td className="px-2 py-3">
-                    <Input
-                      className="h-8 w-full text-xs font-mono"
-                      value={row.sku}
-                      onChange={(e) => setRow({ ...row, sku: e.target.value })}
-                      placeholder="SKU"
-                    />
-                  </td>
-                )}
-
-                {/* Barcode */}
-                {renderBarcodeCol && (
-                  <td className="px-2 py-3">
-                    <div className="inline-flex items-center gap-1.5">
                       <Input
-                        className="h-8 min-w-0 flex-1 text-start font-mono text-xs"
-                        value={row.barcode}
-                        onChange={(e) => setRow({ ...row, barcode: e.target.value })}
-                        placeholder={isAr ? "اختياري" : "Optional"}
+                        className="h-8 w-full text-xs font-semibold col-span-2"
+                        value={row.fabric}
+                        onChange={(e) => setRow({ ...row, fabric: e.target.value })}
+                        placeholder={
+                          (isAr
+                            ? product?.variant_label_fabric_ar
+                            : product?.variant_label_fabric_en) ||
+                          product?.variant_label_fabric_en ||
+                          product?.variant_label_fabric_ar ||
+                          "Fabric"
+                        }
                       />
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-primary p-1 rounded-sm hover:bg-secondary touch-manipulation active:scale-95 transition"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setRow({ ...row, barcode: genBarcode() });
-                        }}
-                      >
-                        <Wand2 className="h-3 w-3" />
-                      </button>
                     </div>
                   </td>
-                )}
 
-                {/* Financials (Cost) */}
-                {canViewFinancials && (
+                  {/* Optional Image */}
+                  {renderImageCol && <td></td>}
+
+                  {/* Optional SKU */}
+                  {renderSkuCol && (
+                    <td className="px-2 py-3">
+                      <Input
+                        className="h-8 w-full text-xs font-mono"
+                        value={row.sku}
+                        placeholder="SKU"
+                        onChange={(e) => setRow({ ...row, sku: e.target.value })}
+                      />
+                    </td>
+                  )}
+
+                  {/* Optional Barcode */}
+                  {renderBarcodeCol && (
+                    <td className="px-2 py-3">
+                      <div className="flex items-center gap-1">
+                        <Input
+                          className="h-8 w-full text-xs font-mono"
+                          value={row.barcode}
+                          placeholder={barcodeLabel}
+                          onChange={(e) => setRow({ ...row, barcode: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-primary p-1 rounded-sm hover:bg-secondary touch-manipulation active:scale-95 transition"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setRow({ ...row, barcode: genBarcode() });
+                          }}
+                        >
+                          <Wand2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Financials (Cost) */}
+                  {canViewFinancials && (
+                    <td className="px-2 py-3 text-center">
+                      <div className="relative inline-flex items-center w-full max-w-[100px] shrink-0">
+                        <Input
+                          className="h-8 w-full pl-2 pr-7 text-center text-xs font-bold"
+                          type="number"
+                          step="0.001"
+                          value={row.cost_price}
+                          onChange={(e) => setRow({ ...row, cost_price: e.target.value })}
+                        />
+                        <span className="absolute right-2 text-[8px] font-black text-muted-foreground/50 pointer-events-none uppercase">
+                          BHD
+                        </span>
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Selling Price */}
                   <td className="px-2 py-3 text-center">
                     <div className="relative inline-flex items-center w-full max-w-[100px] shrink-0">
                       <Input
                         className="h-8 w-full pl-2 pr-7 text-center text-xs font-bold"
                         type="number"
                         step="0.001"
-                        value={row.cost_price}
-                        onChange={(e) => setRow({ ...row, cost_price: e.target.value })}
+                        value={row.selling_price}
+                        onChange={(e) => setRow({ ...row, selling_price: e.target.value })}
                       />
                       <span className="absolute right-2 text-[8px] font-black text-muted-foreground/50 pointer-events-none uppercase">
                         BHD
                       </span>
                     </div>
                   </td>
-                )}
 
-                {/* Selling Price */}
-                <td className="px-2 py-3 text-center">
-                  <div className="relative inline-flex items-center w-full max-w-[100px] shrink-0">
+                  {/* Original Price */}
+                  <td className="px-2 py-3 text-center">
                     <Input
-                      className="h-8 w-full pl-2 pr-7 text-center text-xs font-bold"
+                      className="h-8 w-full text-center text-xs max-w-[100px]"
                       type="number"
                       step="0.001"
-                      value={row.selling_price}
-                      onChange={(e) => setRow({ ...row, selling_price: e.target.value })}
+                      min="0"
+                      value={row.original_price}
+                      placeholder="—"
+                      onChange={(e) => setRow({ ...row, original_price: e.target.value })}
                     />
-                    <span className="absolute right-2 text-[8px] font-black text-muted-foreground/50 pointer-events-none uppercase">
-                      BHD
-                    </span>
-                  </div>
-                </td>
+                  </td>
 
-                {/* Original Price */}
-                <td className="px-2 py-3 text-center">
-                  <Input
-                    className="h-8 w-full text-center text-xs max-w-[100px]"
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={row.original_price}
-                    placeholder="—"
-                    onChange={(e) => setRow({ ...row, original_price: e.target.value })}
-                  />
-                </td>
+                  {/* Margin column (blank on add) */}
+                  {canViewFinancials && <td></td>}
 
-                {/* Margin column (blank on add) */}
-                {canViewFinancials && <td></td>}
+                  {/* Main Stock */}
+                  <td className="px-2 py-3 text-center">
+                    <Input
+                      className="h-8 w-full text-center text-xs max-w-[80px] font-bold"
+                      type="number"
+                      value={row.stock_main}
+                      onChange={(e) => setRow({ ...row, stock_main: e.target.value })}
+                    />
+                  </td>
 
-                {/* Main Stock */}
-                <td className="px-2 py-3 text-center">
-                  <Input
-                    className="h-8 w-full text-center text-xs max-w-[80px] font-bold"
-                    type="number"
-                    value={row.stock_main}
-                    onChange={(e) => setRow({ ...row, stock_main: e.target.value })}
-                  />
-                </td>
+                  {/* Incubator Stock */}
+                  <td className="px-2 py-3 text-center">
+                    <Input
+                      className="h-8 w-full text-center text-xs max-w-[80px] font-bold"
+                      type="number"
+                      value={row.stock_incubator}
+                      onChange={(e) => setRow({ ...row, stock_incubator: e.target.value })}
+                    />
+                  </td>
 
-                {/* Incubator Stock */}
-                <td className="px-2 py-3 text-center">
-                  <Input
-                    className="h-8 w-full text-center text-xs max-w-[80px] font-bold"
-                    type="number"
-                    value={row.stock_incubator}
-                    onChange={(e) => setRow({ ...row, stock_incubator: e.target.value })}
-                  />
-                </td>
-
-                {/* Total stock & Actions */}
-                <td></td>
-                <td className="px-2 py-3">
-                  <div className="flex justify-center gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 px-3 rounded-lg text-xs font-bold"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        add();
-                      }}
-                    >
-                      {t("common.save")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setAdding(false);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  {/* Total stock & Actions */}
+                  <td></td>
+                  <td className="px-2 py-3">
+                    <div className="flex justify-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 px-3 rounded-lg text-xs font-bold"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          add();
+                        }}
+                      >
+                        {t("common.save")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setAdding(false);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Control Buttons Footer */}
@@ -5111,25 +5197,6 @@ function VariantList({
             onChanged={onChanged}
           />
         </div>
-
-        {/* Dynamic Column Toggle Button */}
-        {hasHiddenCols && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-9 px-3.5 rounded-xl text-xs font-semibold text-muted-foreground/85 hover:text-foreground hover:bg-muted"
-            onClick={() => setShowAllCols(!showAllCols)}
-          >
-            {showAllCols
-              ? isAr
-                ? "⚙️ إخفاء الأعمدة الفارغة"
-                : "⚙️ Hide empty columns"
-              : isAr
-                ? "⚙️ إظهار كافة الأعمدة"
-                : "⚙️ Show SKU / Barcode columns"}
-          </Button>
-        )}
       </div>
 
       {/* FLOATING BULK ACTIONS TOOLBAR */}

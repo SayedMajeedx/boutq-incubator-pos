@@ -86,7 +86,7 @@ function OnboardPage() {
       clearInterval(salesInterval);
       clearInterval(notifyInterval);
     };
-  }, []);
+  }, [notifications.length]);
 
   const [loadingPrice, setLoadingPrice] = useState(true);
   const [basePrice, setBasePrice] = useState(55);

@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { formatSizeWithUnit } from "@/components/bilingual-field";
+import { formatSizeWithUnit } from "@/lib/format";
 import {
   ChevronLeft,
   ChevronRight,
@@ -163,7 +163,7 @@ const parsePriceDelta = (valStr: string): number => {
   return 0;
 };
 
-export function ProductDetail({ splatId }: { splatId?: string } = {}) {
+function ProductDetail({ splatId }: { splatId?: string } = {}) {
   const loaderData = Route.useLoaderData() as
     | {
         product: Product | null;
@@ -277,7 +277,7 @@ export function ProductDetail({ splatId }: { splatId?: string } = {}) {
       },
       product.id,
     );
-  }, [product?.id, currency, lang]);
+  }, [product, currency, lang]);
 
   const { data: recommendationCatalog = [] } = useQuery({
     queryKey: ["storefront", brand.slug, "product-recommendations"],

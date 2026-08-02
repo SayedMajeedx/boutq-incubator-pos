@@ -207,7 +207,17 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
     // activeCameraId is intentionally excluded: selecting the initial rear
     // camera updates its label without tearing down the stream that just opened.
     // Explicit lens switches increment restartKey and start a new stream safely.
-  }, [cameraRequested, configureTrack, finish, hints, isAr, open, restartKey, stop]);
+  }, [
+    activeCameraId,
+    cameraRequested,
+    configureTrack,
+    finish,
+    hints,
+    isAr,
+    open,
+    restartKey,
+    stop,
+  ]);
 
   const switchCamera = () => {
     if (cameras.length < 2) return;

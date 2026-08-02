@@ -96,6 +96,11 @@ export function SupportAccessCard({ brand }: SupportAccessCardProps) {
                 onCheckedChange={handleToggle}
                 disabled={toggleMutation.isPending}
                 id="support-access-toggle"
+                aria-label={
+                  lang === "ar"
+                    ? "السماح بوصول الدعم الفني لبوتك"
+                    : "Allow Boutq technical support access"
+                }
               />
             </div>
           </div>

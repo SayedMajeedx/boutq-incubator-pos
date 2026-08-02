@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -57,6 +65,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileError, setProfileError] = useState(false);
+  const mountedRef = useRef(false);
   const navigate = useNavigate();
 
   // Admin identities must be provisioned explicitly by an authorized admin.
@@ -73,7 +82,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error("[ProfileContext] Error fetching profile:", error);
-        setProfileError(true);
+        if (mountedRef.current) setProfileError(true);
         return null;
       }
 
@@ -84,7 +93,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       console.warn(
         `[ProfileContext] Authenticated account ${email || userId} has no dashboard profile`,
       );
-      setProfileError(true);
+      if (mountedRef.current) setProfileError(true);
       return null;
     },
     [],
@@ -118,6 +127,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    mountedRef.current = true;
 
     const init = async () => {
       const {
@@ -137,21 +147,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     init();
 
-    // Listen for auth state changes
+    // Listen for auth state changes (deferred via setTimeout to ensure state updates execute post-mount)
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      (async () => {
-        if (event === "SIGNED_OUT" || !session) {
-          setProfile(null);
-          return;
-        }
-        const p = await fetchProfile(session.user.id);
-        if (mounted) setProfile(p);
-      })();
+      window.setTimeout(() => {
+        if (!mounted) return;
+        (async () => {
+          if (event === "SIGNED_OUT" || !session) {
+            setProfile(null);
+            return;
+          }
+          const p = await fetchProfile(session.user.id);
+          if (mounted) setProfile(p);
+        })();
+      }, 0);
     });
 
     return () => {
       mounted = false;
+      mountedRef.current = false;
       sub.subscription.unsubscribe();
     };
   }, [fetchProfile]);

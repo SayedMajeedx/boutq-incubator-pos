@@ -78,9 +78,13 @@ export function SpotlightCommandPalette({
         .eq("brand_id", bId);
 
       if (isNum) {
-        orderQuery = orderQuery.or(`invoice_number.eq.${parseInt(q, 10)},customer_name_snapshot.ilike.${term}`);
+        orderQuery = orderQuery.or(
+          `invoice_number.eq.${parseInt(q, 10)},customer_name_snapshot.ilike.${term}`,
+        );
       } else {
-        orderQuery = orderQuery.or(`customer_name_snapshot.ilike.${term},customer_phone_snapshot.ilike.${term}`);
+        orderQuery = orderQuery.or(
+          `customer_name_snapshot.ilike.${term},customer_phone_snapshot.ilike.${term}`,
+        );
       }
 
       const [ordersRes, productsRes, customersRes] = await Promise.all([
@@ -203,7 +207,11 @@ export function SpotlightCommandPalette({
                   </span>
                 </div>
                 <span className="text-xs font-mono font-bold">
-                  {formatMoney(Number(o.total || 0), o.currency || "BHD", isAr ? "ar-BH-u-nu-latn" : "en-US")}
+                  {formatMoney(
+                    Number(o.total || 0),
+                    o.currency || "BHD",
+                    isAr ? "ar-BH-u-nu-latn" : "en-US",
+                  )}
                 </span>
               </CommandItem>
             ))}
@@ -228,11 +236,7 @@ export function SpotlightCommandPalette({
               >
                 <div className="flex items-center gap-2">
                   {p.image_url ? (
-                    <img
-                      src={p.image_url}
-                      alt=""
-                      className="h-6 w-6 rounded object-cover border"
-                    />
+                    <img src={p.image_url} alt="" className="h-6 w-6 rounded object-cover border" />
                   ) : (
                     <Package className="h-4 w-4 text-muted-foreground" />
                   )}

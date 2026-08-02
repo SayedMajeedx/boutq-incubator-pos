@@ -108,9 +108,9 @@ function ReportsExport() {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
-      <section className="rounded-2xl border bg-white p-5 shadow-[0_16px_45px_-34px_rgba(43,23,25,.5)] sm:p-7">
-        <div className="mb-7">
+    <div className="grid gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
+      <section className="rounded-2xl border bg-white p-4 shadow-[0_16px_45px_-34px_rgba(43,23,25,.5)] sm:p-7">
+        <div className="mb-5 sm:mb-7">
           <span className="inline-flex items-center gap-2 rounded-full bg-[#6b1d24]/7 px-3 py-1 text-xs font-semibold text-[#6b1d24]">
             <Download className="h-3.5 w-3.5" />
             {lang === "ar" ? "مركز التصدير" : "EXPORT CENTRE"}
@@ -125,12 +125,12 @@ function ReportsExport() {
           </p>
         </div>
 
-        <div className="space-y-7">
+        <div className="space-y-5 sm:space-y-7">
           <Field label={lang === "ar" ? "1. الفترة الزمنية" : "1. Date range"}>
             <DatePickerWithRange date={date} setDate={setDate} className="mt-3" />
           </Field>
           <Field label={lang === "ar" ? "2. محتوى التقرير" : "2. Report content"}>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="mt-3 grid gap-2.5 md:grid-cols-3">
               {reportOptions.map((option) => {
                 const Icon = option.icon;
                 const selected = reportType === option.id;
@@ -140,7 +140,7 @@ function ReportsExport() {
                     type="button"
                     onClick={() => setReportType(option.id)}
                     className={cn(
-                      "rounded-2xl border p-4 text-start transition",
+                      "rounded-2xl border p-3.5 sm:p-4 text-start transition",
                       selected
                         ? "border-[#6b1d24] bg-[#6b1d24]/5 shadow-[0_8px_22px_-18px_rgba(91,20,26,.8)]"
                         : "hover:border-[#6b1d24]/30 hover:bg-[#faf8f7]",
@@ -218,7 +218,7 @@ function ReportsExport() {
         </div>
       </section>
 
-      <aside className="space-y-4">
+      <aside className="grid gap-3 sm:grid-cols-2 xl:block xl:space-y-4">
         <div className="rounded-2xl bg-[linear-gradient(145deg,#481015,#6d2027)] p-6 text-white shadow-[0_20px_50px_-30px_rgba(72,16,21,.85)]">
           <ShieldCheck className="h-8 w-8 text-[#e8cda8]" />
           <h3 className="mt-5 text-xl font-semibold">

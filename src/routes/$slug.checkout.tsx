@@ -79,7 +79,7 @@ function Checkout() {
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
-  }, [mounted]);
+  }, [mounted, t]);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -327,7 +327,7 @@ function Checkout() {
     lang === "ar" ? b.location_ar || b.location_en || "" : b.location_en || b.location_ar || "";
 
   const [selectedZoneId, setSelectedZoneId] = useState<string>("");
-  const zones = settings.shipping_zones ?? [];
+  const zones = useMemo(() => settings.shipping_zones ?? [], [settings.shipping_zones]);
   useEffect(() => {
     if (zones.length > 0) {
       setSelectedZoneId((cur) => cur || zones[0].id);

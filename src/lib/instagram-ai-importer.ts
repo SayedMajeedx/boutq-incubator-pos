@@ -240,7 +240,7 @@ export const fetchScraperDataset = createServerFn({ method: "POST" })
 // Helper function for Eastern Arabic numeral normalization and strict regex pricing rules
 export function extractPriceFallback(caption: string): number {
   // Normalize Eastern Arabic numerals (٠-٩) to Western Arabic (0-9)
-  let text = caption.replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632));
+  const text = caption.replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632));
 
   // Look for BHD prices specifically
   const priceMatch = text.match(/(\d+(?:\.\d{1,3})?)\s*(?:bhd|bd|د\.ب|دينار|ديناراً)/i);

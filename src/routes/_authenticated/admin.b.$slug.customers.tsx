@@ -62,6 +62,17 @@ import {
 import { formatMoney } from "@/lib/format";
 import { buildCustomerCrmStats, type CustomerMetricOrder } from "@/lib/commerce-metrics";
 import { cn } from "@/lib/utils";
+import { getNavFilterContext, saveNavFilterContext } from "@/lib/os-productivity";
+
+import { CustomersCommandHeader } from "@/components/customers/CustomersCommandHeader";
+import {
+  CustomersScopeSwitcher,
+  type CustomerSegmentScope,
+} from "@/components/customers/CustomersScopeSwitcher";
+import { CustomersToolbar } from "@/components/customers/CustomersToolbar";
+import { CustomersWorkQueue } from "@/components/customers/CustomersWorkQueue";
+import { CustomerMobileCard } from "@/components/customers/CustomerMobileCard";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/customers")({
   component: CustomersRoute,
@@ -275,12 +286,19 @@ const CUSTOMER_HEADER_MAPS = {
 function CustomerImporterModal({
   brandId,
   onComplete,
+  renderTrigger,
 }: {
   brandId: string;
   onComplete: () => void;
+  renderTrigger?: (onClick: () => void) => React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<"preset" | "mapper" | "importing" | "success">("preset");
+
+  const handleOpen = () => {
+    setIsOpen(true);
+    setStep("preset");
+  };
   const [preset, setPreset] = useState<
     "shopify" | "salla" | "zid" | "woocommerce" | "whatsapp" | "custom"
   >("custom");
@@ -567,17 +585,18 @@ function CustomerImporterModal({
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsOpen(true);
-          setStep("preset");
-        }}
-        className="border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all text-primary"
-      >
-        <Plus className="h-4 w-4 me-2" />
-        {isAr ? "استيراد العملاء وجهات الاتصال" : "Import Customers"}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger(handleOpen)
+      ) : (
+        <Button
+          variant="outline"
+          onClick={handleOpen}
+          className="border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all text-primary"
+        >
+          <Plus className="h-4 w-4 me-2" />
+          {isAr ? "استيراد العملاء وجهات الاتصال" : "Import Customers"}
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-xl border-zinc-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
@@ -820,16 +839,25 @@ function CustomerImporterModal({
 function CustomersPage() {
   const t = useT();
   const { lang } = useI18n();
+  const isAr = lang === "ar";
   const qc = useQueryClient();
   const brand = useBrand();
   const brandId = brand.id;
   const { slug } = Route.useParams();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [regionFilter, setRegionFilter] = useState("all");
+
+  // Feature 7: Context-preserving return navigation for Customers
+  const savedContext = getNavFilterContext("customers");
+  const [search, setSearch] = useState(savedContext?.search || "");
+  const [regionFilter, setRegionFilter] = useState(savedContext?.regionFilter || "all");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
+
+  // Save navigation context on filter changes
+  useEffect(() => {
+    saveNavFilterContext("customers", { search, regionFilter });
+  }, [search, regionFilter]);
 
   useRealtimeInvalidate(
     [
@@ -904,10 +932,26 @@ function CustomersPage() {
     }
   };
 
+  const [segmentScope, setSegmentScope] = useState<CustomerSegmentScope>("all");
+
+  const segmentCounts = useMemo(() => {
+    const counts = { all: (data ?? []).length, vip: 0, repeat: 0, new: 0, churn: 0 };
+    (data ?? []).forEach((c) => {
+      const stats = customerCrmStats.get(c.id);
+      if (stats?.badge === "VIP") counts.vip++;
+      else if (stats?.badge === "Churn Risk") counts.churn++;
+      else if (stats?.badge === "New Buyer") counts.new++;
+      else if (stats && stats.totalOrders > 1) counts.repeat++;
+    });
+    return counts;
+  }, [data, customerCrmStats]);
+
   const normalizedSearch = search.trim().toLowerCase();
   const filteredCustomers = (data ?? []).filter((customer) => {
     const defaultAddress = defaultByCustomer.get(customer.id);
     const customerRegion = defaultAddress?.region || customer.region || customer.city || "";
+    const stats = customerCrmStats.get(customer.id);
+
     const matchesSearch =
       !normalizedSearch ||
       [customer.name, customer.phone, customer.email].some((value) =>
@@ -915,401 +959,130 @@ function CustomersPage() {
           .toLowerCase()
           .includes(normalizedSearch),
       );
-    return matchesSearch && (regionFilter === "all" || customerRegion === regionFilter);
-  });
-  const pageCount = Math.max(1, Math.ceil(filteredCustomers.length / rowsPerPage));
-  const safePage = Math.min(page, pageCount);
-  const visibleCustomers = filteredCustomers.slice(
-    (safePage - 1) * rowsPerPage,
-    safePage * rowsPerPage,
-  );
 
-  useEffect(() => setPage(1), [search, regionFilter, rowsPerPage]);
+    const matchesRegion = regionFilter === "all" || customerRegion === regionFilter;
+
+    let matchesScope = true;
+    if (segmentScope === "vip") matchesScope = stats?.badge === "VIP";
+    else if (segmentScope === "churn") matchesScope = stats?.badge === "Churn Risk";
+    else if (segmentScope === "new") matchesScope = stats?.badge === "New Buyer";
+    else if (segmentScope === "repeat")
+      matchesScope = Boolean(stats && stats.totalOrders > 1 && stats.badge !== "VIP");
+
+    return matchesSearch && matchesRegion && matchesScope;
+  });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pb-4 pt-7 sm:p-6 lg:p-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300 sm:text-4xl">
-            {t("customers.title")}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">{t("customers.subtitle")}</p>
-        </div>
-        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
+    <div className="space-y-3.5">
+      {/* 1. Integrated Command Header */}
+      <CustomersCommandHeader
+        lang={isAr ? "ar" : "en"}
+        customerCount={(data ?? []).length}
+        onCreateNew={() => setOpen(true)}
+        renderImporters={
           <CustomerImporterModal
             brandId={brandId}
             onComplete={() => qc.invalidateQueries({ queryKey: ["customers"] })}
+            renderTrigger={(openImporter) => (
+              <DropdownMenuItem
+                onClick={openImporter}
+                className="cursor-pointer gap-2 py-2 text-xs font-semibold text-primary"
+              >
+                <Users className="h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  {isAr ? "استيراد العملاء وجهات الاتصال" : "Universal Customer Migration"}
+                </span>
+              </DropdownMenuItem>
+            )}
           />
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95 sm:w-auto">
-                <Plus className="h-4 w-4 me-2" /> {t("customers.new")}
-              </Button>
-            </DialogTrigger>
-            <CustomerDialog
-              customer={null}
-              onSaved={() => {
-                setOpen(false);
-                qc.invalidateQueries({ queryKey: ["customers"] });
-              }}
-            />
-          </Dialog>
-        </div>
-      </div>
+        }
+      />
 
-      <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-4 sm:p-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(260px,1fr)_220px]">
-          <div className="relative">
-            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="ps-9 bg-background/50"
-              placeholder={
-                lang === "ar"
-                  ? "ابحث بالاسم أو الهاتف أو البريد الإلكتروني"
-                  : "Search by name, phone, or email"
+      {/* 2. CRM Segment Scope Switcher */}
+      <CustomersScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        currentScope={segmentScope}
+        onScopeChange={setSegmentScope}
+        counts={segmentCounts}
+      />
+
+      {/* 3. Search & Region Toolbar */}
+      <CustomersToolbar
+        lang={isAr ? "ar" : "en"}
+        search={search}
+        onSearchChange={setSearch}
+        regionFilter={regionFilter}
+        onRegionChange={setRegionFilter}
+        activeFilterCount={
+          (search ? 1 : 0) + (regionFilter !== "all" ? 1 : 0) + (segmentScope !== "all" ? 1 : 0)
+        }
+        onClearFilters={() => {
+          setSearch("");
+          setRegionFilter("all");
+          setSegmentScope("all");
+        }}
+      />
+
+      {/* 4. Mobile Cards View */}
+      <div className="space-y-3 block sm:hidden">
+        {filteredCustomers.map((c) => {
+          const def = defaultByCustomer.get(c.id);
+          const stats = customerCrmStats.get(c.id) || {
+            totalOrders: 0,
+            lifetimeSpend: 0,
+            lastOrderDate: null,
+            badge: null,
+          };
+
+          return (
+            <CustomerMobileCard
+              key={c.id}
+              lang={isAr ? "ar" : "en"}
+              customer={c}
+              defaultAddress={def}
+              stats={stats}
+              currency={currency}
+              onSelect={(customerId) =>
+                navigate({
+                  to: "/admin/b/$slug/customers/$customerId",
+                  params: { slug, customerId },
+                })
               }
             />
-          </div>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="bg-background/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{lang === "ar" ? "كل المناطق" : "All regions"}</SelectItem>
-              {BAHRAIN_REGIONS.map((region) => (
-                <SelectItem key={region.value} value={region.value}>
-                  {lang === "ar" ? region.ar : region.en}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {filteredCustomers.length}{" "}
-          {lang === "ar" ? "عميل" : filteredCustomers.length === 1 ? "customer" : "customers"}
-        </p>
-      </Card>
+          );
+        })}
+      </div>
 
-      {(data ?? []).length === 0 ? (
-        <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-12 text-center animate-fade-in">
-          <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3 animate-pulse" />
-          <p className="text-muted-foreground">{t("customers.none")}</p>
-        </Card>
-      ) : filteredCustomers.length === 0 ? (
-        <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-10 text-center animate-fade-in">
-          <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground animate-pulse" />
-          <p className="font-medium text-lg text-foreground">
-            {lang === "ar" ? "لا يوجد عملاء مطابقون" : "No matching customers"}
-          </p>
-          <Button
-            variant="ghost"
-            className="mt-4 shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-            onClick={() => {
-              setSearch("");
-              setRegionFilter("all");
-            }}
-          >
-            {lang === "ar" ? "مسح البحث والتصفية" : "Clear search and filters"}
-          </Button>
-        </Card>
-      ) : (
-        <>
-          <div className="space-y-3 sm:hidden">
-            {visibleCustomers.map((c) => {
-              const def = defaultByCustomer.get(c.id);
-              const address = def
-                ? formatAddressLine(def, lang) || regionLabel(def.region, lang)
-                : regionLabel(c.region, lang) || c.city;
-              const stats = customerCrmStats.get(c.id) || {
-                totalOrders: 0,
-                lifetimeSpend: 0,
-                lastOrderDate: null,
-                badge: null,
-              };
-              return (
-                <Card
-                  key={c.id}
-                  className="overflow-hidden border border-border/60 shadow-md rounded-2xl bg-card/40 backdrop-blur-sm p-4 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:scale-[1.005] cursor-pointer"
-                  onClick={() =>
-                    navigate({
-                      to: "/admin/b/$slug/customers/$customerId",
-                      params: { slug, customerId: c.id },
-                    })
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-foreground">{c.name}</span>
-                        {(() => {
-                          if (stats.badge === "VIP") {
-                            return (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/60 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
-                                <Star className="h-2.5 w-2.5 fill-amber-500 stroke-amber-500" />
-                                {lang === "ar" ? "مميز" : "VIP"}
-                              </span>
-                            );
-                          }
-                          if (stats.badge === "Churn Risk") {
-                            return (
-                              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                                {lang === "ar" ? "راكد" : "Churn"}
-                              </span>
-                            );
-                          }
-                          if (stats.badge === "New Buyer") {
-                            return (
-                              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                {lang === "ar" ? "جديد" : "New"}
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                      <div
-                        className={`mt-1 flex flex-col ${lang === "ar" ? "items-end" : "items-start"}`}
-                      >
-                        {c.phone && (
-                          <div className="text-sm text-muted-foreground" dir="ltr">
-                            {c.phone}
-                          </div>
-                        )}
-                        {c.email && (
-                          <div
-                            className="max-w-full break-all text-sm text-muted-foreground"
-                            dir="ltr"
-                          >
-                            {c.email}
-                          </div>
-                        )}
-                      </div>
-                      {address && (
-                        <div className="mt-2 text-xs text-muted-foreground">{address}</div>
-                      )}
-                      {c.notes &&
-                        !/(migrated_shopify|(?:^|\|)\s*(?:tags|notes):)/i.test(c.notes) && (
-                          <div className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                            {c.notes}
-                          </div>
-                        )}
+      {/* 5. Desktop High-Density Work Queue */}
+      <div className="hidden sm:block">
+        <CustomersWorkQueue
+          lang={isAr ? "ar" : "en"}
+          customers={filteredCustomers}
+          defaultByCustomer={defaultByCustomer}
+          customerCrmStats={customerCrmStats}
+          currency={currency}
+          isLoading={false}
+          isError={false}
+          onSelectCustomer={(customerId) =>
+            navigate({
+              to: "/admin/b/$slug/customers/$customerId",
+              params: { slug, customerId },
+            })
+          }
+          onDeleteCustomer={(c) => del(c.id)}
+        />
+      </div>
 
-                      <div className="mt-2 flex items-center gap-3 text-xs border-t border-border/50 pt-2 text-muted-foreground">
-                        <span>
-                          {lang === "ar" ? "الطلبات:" : "Orders:"}{" "}
-                          <b className="text-foreground">{stats.totalOrders}</b>
-                        </span>
-                        <span>•</span>
-                        <span>
-                          {lang === "ar" ? "الإنفاق:" : "Spend:"}{" "}
-                          <b className="text-foreground">
-                            {formatMoney(stats.lifetimeSpend, currency)}
-                          </b>
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronRight
-                      className={cn(
-                        "mt-1 h-5 w-5 shrink-0 text-muted-foreground",
-                        lang === "ar" && "rotate-180",
-                      )}
-                    />
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-          <Card className="hidden overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm sm:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] table-fixed text-sm">
-                <colgroup>
-                  <col style={{ width: "24%" }} />
-                  <col style={{ width: "22%" }} />
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "8%" }} />
-                </colgroup>
-                <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
-                  <tr>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider">
-                      {t("customers.name")}
-                    </th>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider">
-                      {t("customers.contact")}
-                    </th>
-                    <th className="p-4 text-center font-semibold text-xs uppercase tracking-wider">
-                      {lang === "ar" ? "الطلبات" : "Total Orders"}
-                    </th>
-                    <th className="p-4 text-center font-semibold text-xs uppercase tracking-wider">
-                      {lang === "ar" ? "إجمالي الإنفاق" : "Lifetime Spend"}
-                    </th>
-                    <th className="p-4 text-center font-semibold text-xs uppercase tracking-wider">
-                      {lang === "ar" ? "التصنيف" : "Segment"}
-                    </th>
-                    <th className="p-4 text-end font-semibold text-xs uppercase tracking-wider">
-                      <span className="sr-only">{lang === "ar" ? "الإجراءات" : "Actions"}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleCustomers.map((c) => {
-                    const stats = customerCrmStats.get(c.id) || {
-                      totalOrders: 0,
-                      lifetimeSpend: 0,
-                      lastOrderDate: null,
-                      badge: null,
-                    };
-                    return (
-                      <tr
-                        key={c.id}
-                        tabIndex={0}
-                        className="cursor-pointer border-t border-border transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
-                        onClick={() =>
-                          navigate({
-                            to: "/admin/b/$slug/customers/$customerId",
-                            params: { slug, customerId: c.id },
-                          })
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ")
-                            navigate({
-                              to: "/admin/b/$slug/customers/$customerId",
-                              params: { slug, customerId: c.id },
-                            });
-                        }}
-                      >
-                        <td className="p-4 text-start">
-                          <p className="font-medium text-foreground">{c.name}</p>
-                          {c.notes &&
-                            !/(migrated_shopify|(?:^|\|)\s*(?:tags|notes):)/i.test(c.notes) && (
-                              <p className="mt-1 max-w-[200px] truncate text-xs text-muted-foreground">
-                                {c.notes}
-                              </p>
-                            )}
-                        </td>
-                        <td className="p-4 text-muted-foreground">
-                          <div
-                            className={`flex flex-col ${lang === "ar" ? "items-end" : "items-start"}`}
-                          >
-                            {c.phone && (
-                              <div className="text-xs font-mono" dir="ltr">
-                                {c.phone}
-                              </div>
-                            )}
-                            {c.email && (
-                              <div
-                                className="max-w-[180px] truncate text-xs"
-                                dir="ltr"
-                                title={c.email}
-                              >
-                                {c.email}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4 text-center font-medium text-foreground">
-                          {stats.totalOrders}
-                        </td>
-                        <td className="p-4 text-center font-semibold text-foreground">
-                          {formatMoney(stats.lifetimeSpend, currency)}
-                        </td>
-                        <td className="p-4 text-center">
-                          <div className="flex justify-center items-center">
-                            {(() => {
-                              if (stats.badge === "VIP") {
-                                return (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/60 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-400">
-                                    <Star className="h-3 w-3 fill-amber-500 stroke-amber-500" />
-                                    {lang === "ar" ? "مميز" : "VIP"}
-                                  </span>
-                                );
-                              }
-                              if (stats.badge === "Churn Risk") {
-                                return (
-                                  <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                                    {lang === "ar" ? "راكد" : "Churn Risk"}
-                                  </span>
-                                );
-                              }
-                              if (stats.badge === "New Buyer") {
-                                return (
-                                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                    {lang === "ar" ? "جديد" : "New Buyer"}
-                                  </span>
-                                );
-                              }
-                              return <span className="text-xs text-muted-foreground">—</span>;
-                            })()}
-                          </div>
-                        </td>
-                        <td
-                          className="p-4 text-end whitespace-nowrap"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <DeleteAction
-                            message={t("customers.deleteConfirm")}
-                            onConfirm={() => del(c.id)}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-          <div className="mt-4 flex flex-col items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm px-4 py-3 sm:flex-row shadow-sm">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{lang === "ar" ? "صفوف في الصفحة" : "Rows per page"}</span>
-              <Select
-                value={String(rowsPerPage)}
-                onValueChange={(value) => setRowsPerPage(Number(value))}
-              >
-                <SelectTrigger className="h-8 w-20 bg-background/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 25, 50].map((count) => (
-                    <SelectItem key={count} value={String(count)}>
-                      {count}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {lang === "ar"
-                  ? `الصفحة ${safePage} من ${pageCount}`
-                  : `Page ${safePage} of ${pageCount}`}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-background/50 shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-                disabled={safePage <= 1}
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                {lang === "ar" ? "السابق" : "Previous"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-background/50 shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-                disabled={safePage >= pageCount}
-                onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-              >
-                {lang === "ar" ? "التالي" : "Next"}
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Customer Creation Dialog */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <CustomerDialog
+          customer={null}
+          onSaved={() => {
+            setOpen(false);
+            qc.invalidateQueries({ queryKey: ["customers"] });
+          }}
+        />
+      </Dialog>
     </div>
   );
 }

@@ -144,7 +144,7 @@ function IndexRedirector() {
     };
 
     void resolveRouting();
-  }, [navigate]);
+  }, [navigate, isAr]);
 
   return <IndexComponent text={loaderText} />;
 }

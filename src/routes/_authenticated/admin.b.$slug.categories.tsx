@@ -20,6 +20,8 @@ import { useI18n } from "@/lib/i18n";
 import { useBrand } from "@/lib/brand-context";
 import { uploadPublicMedia } from "@/lib/r2-upload";
 import { useRealtimeInvalidate } from "@/hooks/use-realtime-invalidate";
+import { CategoriesCommandHeader } from "@/components/categories/CategoriesCommandHeader";
+import { CategoriesWorkQueue } from "@/components/categories/CategoriesWorkQueue";
 
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/categories")({
   component: CategoriesPage,
@@ -105,144 +107,53 @@ function CategoriesPage() {
 
   return (
     <div
-      className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
+      className="mx-auto max-w-6xl space-y-4 p-1 sm:p-2 animate-fade-in"
       dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-            {isAr ? "الأقسام" : "Categories"}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-            {isAr
-              ? "أنشئ أقسام المتجر (مثل عبايات، فساتين) واربطها بالمنتجات"
-              : "Create storefront categories and link them to products."}
-          </p>
-        </div>
-        <Dialog
-          open={open}
-          onOpenChange={(v) => {
-            setOpen(v);
-            if (!v) setEditing(null);
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => setEditing(null)}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95 gap-2"
-            >
-              <Plus className="h-4 w-4" /> {isAr ? "قسم جديد" : "New category"}
-            </Button>
-          </DialogTrigger>
-          <CategoryDialog
-            brandId={brandId}
-            category={editing}
-            onSaved={() => {
-              setOpen(false);
-              setEditing(null);
-              qc.invalidateQueries({ queryKey: ["categories", brandId] });
-            }}
-          />
-        </Dialog>
-      </div>
+      <CategoriesCommandHeader
+        lang={lang}
+        categoryCount={(data ?? []).length}
+        onCreateNew={() => {
+          setEditing(null);
+          setOpen(true);
+        }}
+      />
 
-      {(data ?? []).length === 0 ? (
-        <Card className="p-16 text-center border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm">
-          <Tags className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">
-            {isAr ? "لا توجد أقسام بعد" : "No categories yet"}
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(data ?? []).map((c) => (
-            <Card
-              key={c.id}
-              className={`overflow-hidden border-border/60 shadow-md hover:shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-5 transition-all duration-200 ${!c.is_active ? "opacity-60" : ""}`}
-            >
-              <div className="flex gap-3">
-                {c.image_url ? (
-                  <img
-                    src={c.image_url}
-                    alt=""
-                    className="h-20 w-20 rounded-xl object-cover border"
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-xl bg-secondary grid place-items-center text-muted-foreground">
-                    <Tags className="h-6 w-6" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate text-foreground">
-                    {isAr ? c.name_ar || c.name_en : c.name_en}
-                  </div>
-                  {c.parent_id && (
-                    <div className="text-xs text-primary/80 font-medium truncate mt-0.5">
-                      {isAr ? "تابع لـ: " : "Sub of: "}
-                      {(() => {
-                        const parent = (data ?? []).find((p) => p.id === c.parent_id);
-                        return parent
-                          ? isAr
-                            ? parent.name_ar || parent.name_en
-                            : parent.name_en
-                          : "...";
-                      })()}
-                    </div>
-                  )}
-                  {c.slug && (
-                    <div className="text-xs text-muted-foreground truncate">/{c.slug}</div>
-                  )}
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {isAr ? "الترتيب" : "Order"}: {c.sort_order}
-                    {!c.is_active && ` · ${isAr ? "غير نشط" : "inactive"}`}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => move(c, -1)}
-                    className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => move(c, 1)}
-                    className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditing(c);
-                      setOpen(true);
-                    }}
-                    className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                  >
-                    <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => remove(c)}
-                    className="hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 rounded-lg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <CategoriesWorkQueue
+        lang={lang}
+        categories={data ?? []}
+        isLoading={false}
+        onEdit={(cat) => {
+          setEditing(cat);
+          setOpen(true);
+        }}
+        onDelete={(id) => {
+          const c = (data ?? []).find((x) => x.id === id);
+          if (c) remove(c);
+        }}
+        onReorder={(id, dir) => {
+          const c = (data ?? []).find((x) => x.id === id);
+          if (c) move(c, dir === "up" ? -1 : 1);
+        }}
+      />
+
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
+      >
+        <CategoryDialog
+          brandId={brandId}
+          category={editing}
+          onSaved={() => {
+            setOpen(false);
+            setEditing(null);
+            qc.invalidateQueries({ queryKey: ["categories", brandId] });
+          }}
+        />
+      </Dialog>
     </div>
   );
 }

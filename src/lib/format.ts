@@ -72,6 +72,12 @@ export function formatOrderStatus(
   switch (s) {
     case "draft":
       return lang === "ar" ? "مسودة" : "Draft";
+    case "pending":
+      return lang === "ar" ? "قيد الانتظار" : "Pending";
+    case "unpaid":
+      return lang === "ar" ? "غير مدفوع" : "Unpaid";
+    case "needs_packing":
+      return lang === "ar" ? "يحتاج للتجهيز" : "Needs Packing";
     case "confirmed":
       return lang === "ar" ? "مؤكد" : "Confirmed";
     case "paid":
@@ -87,4 +93,34 @@ export function formatOrderStatus(
     default:
       return status;
   }
+}
+
+/** Format a size value with an optional unit, translating known units to Arabic. */
+export function formatSizeWithUnit(
+  size: string | null | undefined,
+  unit: string | null | undefined,
+  lang: "ar" | "en",
+): string {
+  const s = (size ?? "").trim();
+  if (!s) return "";
+  const u = (unit ?? "").trim();
+  if (!u) return s;
+  if (lang !== "ar") return `${s}${u}`;
+  const map: Record<string, string> = {
+    cm: "سم",
+    mm: "مم",
+    m: "م",
+    inch: "بوصة",
+    in: "بوصة",
+    ft: "قدم",
+    kg: "كجم",
+    g: "جم",
+    grams: "جم",
+    gram: "جم",
+    lb: "رطل",
+    ml: "مل",
+    l: "لتر",
+  };
+  const key = u.toLowerCase();
+  return `${s}${map[key] ?? u}`;
 }

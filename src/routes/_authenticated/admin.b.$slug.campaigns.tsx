@@ -41,6 +41,12 @@ import { toast } from "sonner";
 import { useBrand } from "@/lib/brand-context";
 import { buildCustomerCrmStats, type CustomerMetricOrder } from "@/lib/commerce-metrics";
 
+import { CampaignsCommandHeader } from "@/components/campaigns/CampaignsCommandHeader";
+import {
+  CampaignsScopeSwitcher,
+  type CampaignSegment,
+} from "@/components/campaigns/CampaignsScopeSwitcher";
+
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/campaigns")({
   validateSearch: (search: Record<string, unknown>) => ({
     segment: (typeof search.segment === "string" ? search.segment : "All") as
@@ -248,6 +254,27 @@ function CampaignsPage() {
       (c) => c.name.toLowerCase().includes(q) || (c.phone ?? "").toLowerCase().includes(q),
     );
   }, [customersQ.data, search, selectedSegment, customerCrmStats]);
+
+  const segmentCounts = useMemo(() => {
+    const list = customersQ.data ?? [];
+    let vip = 0;
+    let churn = 0;
+    let newBuyer = 0;
+
+    list.forEach((c) => {
+      const badge = customerCrmStats.get(c.id)?.badge;
+      if (badge === "VIP") vip++;
+      else if (badge === "Churn Risk") churn++;
+      else if (badge === "New Buyer") newBuyer++;
+    });
+
+    return {
+      All: list.length,
+      VIP: vip,
+      "Churn Risk": churn,
+      "New Buyer": newBuyer,
+    };
+  }, [customersQ.data, customerCrmStats]);
 
   // Pre-populate checkboxes on segment/filter change
   useEffect(() => {
@@ -594,104 +621,36 @@ function CampaignsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-          <Megaphone className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-            {isAr ? "حملات الواتساب" : "WhatsApp Campaigns"}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-            {isAr
-              ? "أرسل رسائل تسويقية مخصصة إلى عملائك عبر الواتساب."
-              : "Broadcast personalized marketing messages to your customers via WhatsApp."}
-          </p>
-        </div>
-      </div>
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <CampaignsCommandHeader
+        lang={isAr ? "ar" : "en"}
+        brandName={(isAr ? brand.name_ar : brand.name_en) || brand.name_en || brand.slug}
+        templateCount={templates.length}
+        selectedCount={selectedCustomerIds.length}
+        onNewTemplate={() => openSave("new")}
+        onStartBulk={() => {
+          if (selectedCustomerIds.length === 0) {
+            toast.error(isAr ? "اختر عميلًا واحدًا على الأقل" : "Select at least one customer");
+            return;
+          }
+          const queue = (customersQ.data ?? []).filter((c) => selectedCustomerIds.includes(c.id));
+          setBulkQueue(queue);
+          setBulkIndex(0);
+          setBulkSent({});
+          setBulkOpen(true);
+        }}
+      />
 
-      {/* Target Audience Segment Filter Toolbar */}
-      <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-4 sm:p-5 mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              {isAr ? "🎯 الفئة المستهدفة للحملة" : "🎯 Target Campaign Audience"}
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {isAr
-                ? "قم بتصفية مستقبلي البث باستخدام تصنيفات CRM الذكية"
-                : "Filter broadcast recipients using smart CRM categories"}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="w-full sm:w-56 shrink-0">
-              <Select value={selectedSegment} onValueChange={(val: any) => setSelectedSegment(val)}>
-                <SelectTrigger className="w-full bg-background border-input text-sm">
-                  <SelectValue placeholder={isAr ? "اختر شريحة..." : "Select segment..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">{isAr ? "كل العملاء (All)" : "All Customers"}</SelectItem>
-                  <SelectItem value="VIP">{isAr ? "كبار العملاء (VIP)" : "VIP"}</SelectItem>
-                  <SelectItem value="Churn Risk">
-                    {isAr ? "معرض للمغادرة (Churn Risk)" : "Churn Risk"}
-                  </SelectItem>
-                  <SelectItem value="New Buyer">
-                    {isAr ? "مشتري جديد (New Buyer)" : "New Buyer"}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+      {/* 2. Scope Switcher */}
+      <CampaignsScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        activeSegment={selectedSegment}
+        onSegmentChange={(seg) => setSelectedSegment(seg)}
+        counts={segmentCounts}
+      />
 
-        {/* Quick horizontal filter pill shortcuts */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-          <span className="text-xs text-muted-foreground">
-            {isAr ? "فئات سريعة:" : "Quick filters:"}
-          </span>
-          {(["All", "VIP", "Churn Risk", "New Buyer"] as const).map((seg) => {
-            const isActive = selectedSegment === seg;
-            let count = 0;
-            if (seg === "All") {
-              count = customersQ.data?.length ?? 0;
-            } else {
-              count = (customersQ.data ?? []).filter(
-                (c) => customerCrmStats.get(c.id)?.badge === seg,
-              ).length;
-            }
-            return (
-              <button
-                key={seg}
-                type="button"
-                onClick={() => setSelectedSegment(seg)}
-                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md scale-102"
-                    : "bg-background border border-input text-muted-foreground hover:bg-secondary/40 hover:scale-[1.02]"
-                }`}
-              >
-                {seg === "All" && (isAr ? "الكل" : "All")}
-                {seg === "VIP" && (isAr ? "كبار العملاء" : "VIP")}
-                {seg === "Churn Risk" && (isAr ? "معرض للمغادرة" : "Churn Risk")}
-                {seg === "New Buyer" && (isAr ? "مشترون جدد" : "New Buyer")}
-                <span
-                  className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    isActive
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-4 sm:p-6 mb-6 space-y-4">
+      <Card className="mb-3 space-y-4 overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-3 shadow-lg backdrop-blur-sm sm:mb-6 sm:p-6">
         {/* Template picker + actions */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1 min-w-0">
@@ -721,11 +680,11 @@ function CampaignsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex">
             <Button
               variant="outline"
               onClick={() => openSave("new")}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
+              className="min-w-0 px-2 shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow active:scale-95 sm:px-4"
             >
               <Plus className="h-4 w-4 me-2" />
               {isAr ? "قالب جديد" : "New"}
@@ -734,7 +693,7 @@ function CampaignsPage() {
               variant="outline"
               onClick={() => openSave("update")}
               disabled={!selectedId}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
+              className="min-w-0 px-2 shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow active:scale-95 sm:px-4"
             >
               <Save className="h-4 w-4 me-2" />
               {isAr ? "حفظ القالب" : "Save Template"}
@@ -743,7 +702,7 @@ function CampaignsPage() {
               variant="ghost"
               onClick={deleteTemplate}
               disabled={!selectedId}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
+              className="min-w-0 px-2 shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow active:scale-95 sm:px-4"
             >
               <Trash2 className="h-4 w-4 me-2 text-destructive" />
               {isAr ? "حذف" : "Delete"}
@@ -788,8 +747,8 @@ function CampaignsPage() {
       </Card>
 
       <Card className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm">
-        <div className="p-4 border-b border-border/50 bg-primary/5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-col justify-between gap-3 border-b border-border/50 bg-primary/5 p-3 sm:flex-row sm:items-center sm:p-4">
+          <div className="relative w-full flex-1 sm:max-w-sm">
             <Search className="h-4 w-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
@@ -798,8 +757,8 @@ function CampaignsPage() {
               className="ps-9 text-start bg-background/50 focus:bg-background transition-colors duration-200"
             />
           </div>
-          <div className="flex items-center gap-4 flex-wrap justify-between sm:justify-end">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:gap-4">
+            <div className="col-span-2 flex items-center justify-between gap-3 text-sm text-muted-foreground sm:col-span-1 sm:justify-start">
               <span>
                 {Object.values(sent).filter(Boolean).length}/{filtered.length}{" "}
                 {isAr ? "مرسلة" : "sent"}
@@ -818,7 +777,7 @@ function CampaignsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="border-dashed hover:bg-secondary font-medium shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
+              className="h-auto min-h-9 whitespace-normal border-dashed font-medium shadow-sm transition-all duration-200 hover:scale-[1.01] hover:bg-secondary hover:shadow active:scale-95"
               onClick={exportBulkCampaignCsv}
               disabled={selectedCustomerIds.length === 0}
             >
@@ -827,7 +786,7 @@ function CampaignsPage() {
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
+              className="h-auto min-h-9 whitespace-normal bg-primary font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:scale-[1.01] hover:bg-primary/90 hover:shadow active:scale-95"
               onClick={launchBulkCampaign}
               disabled={selectedCustomerIds.length === 0}
             >

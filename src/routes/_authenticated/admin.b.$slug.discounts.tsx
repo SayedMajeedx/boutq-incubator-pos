@@ -32,6 +32,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/format";
 
+import { DiscountsCommandHeader } from "@/components/discounts/DiscountsCommandHeader";
+import {
+  DiscountsScopeSwitcher,
+  type DiscountStatusTab,
+} from "@/components/discounts/DiscountsScopeSwitcher";
+import { DiscountsToolbar } from "@/components/discounts/DiscountsToolbar";
+import { DiscountsWorkQueue } from "@/components/discounts/DiscountsWorkQueue";
+import { DiscountMobileCard } from "@/components/discounts/DiscountMobileCard";
+
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/discounts")({
   component: DiscountCodes,
 });
@@ -109,7 +118,9 @@ function DiscountCodes() {
   const [showMarginWarning, setShowMarginWarning] = useState(false);
 
   // Filter tabs state: 'all' | 'active' | 'scheduled' | 'expired'
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "scheduled" | "expired">("all");
+  const [activeTab, setActiveTab] = useState<DiscountStatusTab>("all");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   const settingsQ = useQuery({
     queryKey: ["business-settings-currency", brand.id],
@@ -252,7 +263,7 @@ function DiscountCodes() {
 
     toast.success(
       ar
-        ? `تم ${nextActive ? "تفعيل" : "إيقاف مؤقت"} الرمز ${p.code} بنجاح`
+        ? `رمز الخصم ${p.code} ${nextActive ? "تم تفعيله" : "تم إيقافه"} بنجاح!`
         : `Promo code ${p.code} ${nextActive ? "activated" : "paused"} successfully!`,
     );
 
@@ -399,343 +410,89 @@ function DiscountCodes() {
     return isExpired || isCapReached;
   }).length;
 
-  // Filter list based on selected tab
+  // Filter list based on selected tab and search/type
   const displayedPromos = allList.filter((p) => {
     const isStarted = !p.start_date || new Date(p.start_date) <= now;
     const isExpired = p.end_date && new Date(p.end_date) < now;
     const usage = analyticsQ.data?.[p.id]?.count || 0;
     const isCapReached = p.max_redemptions != null && usage >= p.max_redemptions;
 
-    if (activeTab === "active") {
-      return p.is_active && isStarted && !isExpired && !isCapReached;
-    }
-    if (activeTab === "scheduled") {
-      return p.is_active && !isStarted && !isExpired;
-    }
-    if (activeTab === "expired") {
-      return isExpired || isCapReached;
-    }
-    return true; // 'all'
+    let matchesTab = true;
+    if (activeTab === "active")
+      matchesTab = p.is_active && isStarted && !isExpired && !isCapReached;
+    else if (activeTab === "scheduled") matchesTab = p.is_active && !isStarted && !isExpired;
+    else if (activeTab === "expired") matchesTab = isExpired || isCapReached;
+
+    const matchesSearch = !search || p.code.toLowerCase().includes(search.toLowerCase());
+    const matchesType = typeFilter === "all" || p.discount_type === typeFilter;
+
+    return matchesTab && matchesSearch && matchesType;
   });
 
   return (
-    <div
-      className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
-      dir={ar ? "rtl" : "ltr"}
-    >
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-            {ar ? "رموز الخصم" : "Discount Codes"}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-            {ar
-              ? "أنشئ عروضاً خاصة وحدد شروط الأهلية والجدولة."
-              : "Create and manage promotions, schedules, and limits for this brand."}
-          </p>
-        </div>
-        <Button
-          onClick={beginCreate}
-          className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95 gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          {ar ? "إنشاء رمز خصم" : "Create Promo Code"}
-        </Button>
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <DiscountsCommandHeader
+        lang={ar ? "ar" : "en"}
+        promoCount={allList.length}
+        onCreateNew={beginCreate}
+      />
+
+      {/* 2. Scope Switcher Tabs */}
+      <DiscountsScopeSwitcher
+        lang={ar ? "ar" : "en"}
+        currentTab={activeTab}
+        onTabChange={setActiveTab}
+        counts={{
+          all: allList.length,
+          active: activeCount,
+          scheduled: scheduledCount,
+          expired: expiredCount,
+        }}
+      />
+
+      {/* 3. Toolbar */}
+      <DiscountsToolbar
+        lang={ar ? "ar" : "en"}
+        search={search}
+        onSearchChange={setSearch}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
+        activeFilterCount={(search ? 1 : 0) + (typeFilter !== "all" ? 1 : 0)}
+        onClearFilters={() => {
+          setSearch("");
+          setTypeFilter("all");
+        }}
+      />
+
+      {/* 4. Mobile View */}
+      <div className="space-y-2.5 block sm:hidden">
+        {displayedPromos.map((p) => (
+          <DiscountMobileCard
+            key={p.id}
+            lang={ar ? "ar" : "en"}
+            promo={p}
+            currency={currency}
+            analyticsData={analyticsQ.data}
+            onEdit={beginEdit}
+            onToggleActive={toggleActive}
+            onDelete={remove}
+          />
+        ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-        <TabsList className="bg-muted/60 p-1 rounded-xl">
-          <TabsTrigger
-            value="all"
-            className="rounded-lg text-xs sm:text-sm font-medium gap-1.5 py-1.5"
-          >
-            {ar ? "الكل" : "All"}
-            <span className="bg-slate-200/80 dark:bg-slate-800/80 px-2 py-0.5 rounded-full text-xs font-semibold">
-              {allList.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="active"
-            className="rounded-lg text-xs sm:text-sm font-medium gap-1.5 py-1.5 data-[state=active]:text-emerald-700 dark:data-[state=active]:text-emerald-400"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            {ar ? "النشطة" : "Active"}
-            <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full text-xs font-semibold">
-              {activeCount}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="scheduled"
-            className="rounded-lg text-xs sm:text-sm font-medium gap-1.5 py-1.5 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-400"
-          >
-            <Clock className="h-3.5 w-3.5 text-amber-500" />
-            {ar ? "المجدولة" : "Scheduled"}
-            <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full text-xs font-semibold">
-              {scheduledCount}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="expired"
-            className="rounded-lg text-xs sm:text-sm font-medium gap-1.5 py-1.5 data-[state=active]:text-rose-700 dark:data-[state=active]:text-rose-400"
-          >
-            <AlertCircle className="h-3.5 w-3.5 text-rose-500" />
-            {ar ? "المنتهية" : "Expired"}
-            <span className="bg-rose-100 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 px-2 py-0.5 rounded-full text-xs font-semibold">
-              {expiredCount}
-            </span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* List Card */}
-      <Card className="overflow-hidden border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm">
-        {promos.isLoading || analyticsQ.isLoading ? (
-          <div className="p-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-sm font-medium">
-              {ar ? "جاري تحميل البيانات..." : "Loading promotions..."}
-            </span>
-          </div>
-        ) : !allList.length ? (
-          <div className="grid place-items-center gap-4 p-16 text-center">
-            <div className="p-4 bg-muted/50 rounded-full">
-              <Tags className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="font-semibold text-lg">
-                {ar ? "لا توجد رموز خصم حتى الآن" : "No promo codes yet"}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                {ar
-                  ? "أنشئ أول عرض ترويجي لجذب المتسوقين وزيادة مبيعاتك."
-                  : "Create your first storefront offer to attract buyers and boost sales."}
-              </div>
-            </div>
-            <Button variant="outline" onClick={beginCreate} className="mt-2 rounded-xl">
-              {ar ? "+ إضافة رمز" : "+ Add code"}
-            </Button>
-          </div>
-        ) : !displayedPromos.length ? (
-          <div className="grid place-items-center gap-2 p-16 text-center text-muted-foreground">
-            <Tags className="h-8 w-8 opacity-40 mb-2" />
-            <span className="text-sm font-medium">
-              {ar ? "لا توجد نتائج تطابق التبويب المختار." : "No promo codes in this status."}
-            </span>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-sm text-left">
-              <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
-                <tr className={ar ? "text-right" : "text-left"}>
-                  <th className="px-6 py-4">{ar ? "الرمز" : "Code"}</th>
-                  <th className="px-6 py-4">{ar ? "نوع الخصم" : "Discount"}</th>
-                  <th className="px-6 py-4">{ar ? "الأداء (المبيعات)" : "Driven Revenue"}</th>
-                  <th className="px-6 py-4">{ar ? "معدل الاستهلاك" : "Redemptions"}</th>
-                  <th className="px-6 py-4">{ar ? "تاريخ الصلاحية" : "Scheduling"}</th>
-                  <th className="px-6 py-4 text-center">{ar ? "الحالة" : "Active"}</th>
-                  <th className="px-6 py-4 text-center">{ar ? "الإجراءات" : "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {displayedPromos.map((p) => {
-                  const usage = analyticsQ.data?.[p.id]?.count || 0;
-                  const revenue = analyticsQ.data?.[p.id]?.revenue || 0;
-                  const limit = p.max_redemptions;
-                  const percent = limit ? Math.min((usage / limit) * 100, 100) : 0;
-
-                  // Evaluate status classification labels
-                  const isStarted = !p.start_date || new Date(p.start_date) <= now;
-                  const isExpired = p.end_date && new Date(p.end_date) < now;
-                  const isCapReached = limit != null && usage >= limit;
-
-                  let statusBadge = (
-                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-semibold">
-                      <CheckCircle2 className="h-3 w-3" />
-                      {ar ? "نشط" : "Active"}
-                    </span>
-                  );
-                  if (!p.is_active) {
-                    statusBadge = (
-                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 dark:bg-slate-900/50 dark:text-slate-400 px-2 py-0.5 rounded-full text-[11px] font-semibold">
-                        {ar ? "متوقف" : "Paused"}
-                      </span>
-                    );
-                  } else if (!isStarted) {
-                    statusBadge = (
-                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-semibold">
-                        <Clock className="h-3 w-3" />
-                        {ar ? "مجدول" : "Scheduled"}
-                      </span>
-                    );
-                  } else if (isExpired || isCapReached) {
-                    statusBadge = (
-                      <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 px-2 py-0.5 rounded-full text-[11px] font-semibold">
-                        <AlertCircle className="h-3 w-3" />
-                        {isCapReached
-                          ? ar
-                            ? "نفذ بالكامل"
-                            : "Exhausted"
-                          : ar
-                            ? "منتهي الصلاحية"
-                            : "Expired"}
-                      </span>
-                    );
-                  }
-
-                  return (
-                    <tr key={p.id} className="transition-colors hover:bg-muted/20 align-middle">
-                      {/* Code */}
-                      <td className="px-6 py-4.5">
-                        <div className="font-mono font-extrabold text-sm text-foreground tracking-wider bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg inline-block shadow-xs">
-                          {p.code}
-                        </div>
-                      </td>
-
-                      {/* Type/Value */}
-                      <td className="px-6 py-4.5">
-                        <div className="font-medium text-foreground">
-                          {p.discount_type === "percentage"
-                            ? `${p.discount_value}%`
-                            : formatMoney(Number(p.discount_value), currency, lang)}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
-                          {p.discount_type === "percentage"
-                            ? ar
-                              ? "نسبة مئوية"
-                              : "Percentage value"
-                            : ar
-                              ? `خصم ثابت من السلة`
-                              : `Fixed cart discount`}
-                        </div>
-                      </td>
-
-                      {/* Revenue Driven */}
-                      <td className="px-6 py-4.5 font-mono font-bold text-emerald-600 dark:text-emerald-400 tabular-nums text-sm">
-                        {formatMoney(Number(revenue), currency, lang)}
-                      </td>
-
-                      {/* Usage / Progress Bar */}
-                      <td className="px-6 py-4.5">
-                        <div className="space-y-1.5 min-w-[140px] max-w-[200px]">
-                          <div className="flex justify-between items-center text-[11px] font-semibold">
-                            <span className="text-muted-foreground">
-                              {ar ? "الاستهلاك" : "Usage"}
-                            </span>
-                            <span className="font-mono tabular-nums text-foreground">
-                              {usage} {limit ? `/ ${limit}` : ` / ∞`}
-                            </span>
-                          </div>
-                          <div className="relative w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ease-out ${
-                                isCapReached
-                                  ? "bg-rose-500"
-                                  : percent >= 85
-                                    ? "bg-amber-500"
-                                    : "bg-emerald-500"
-                              }`}
-                              style={{
-                                width: `${limit ? percent : 100}%`,
-                                opacity: limit ? 1 : 0.3,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Expiry Dates / Scheduling */}
-                      <td className="px-6 py-4.5 text-xs text-muted-foreground">
-                        {p.start_date || p.end_date ? (
-                          <div className="space-y-0.5">
-                            {p.start_date && (
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium text-[10px] uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-1 rounded">
-                                  {ar ? "بدء" : "From"}
-                                </span>
-                                <span className="font-mono">
-                                  {new Date(p.start_date).toLocaleDateString(
-                                    lang === "ar" ? "ar-BH-u-nu-latn" : "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    },
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                            {p.end_date && (
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium text-[10px] uppercase tracking-wider bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 px-1 rounded">
-                                  {ar ? "انتهاء" : "Ends"}
-                                </span>
-                                <span className="font-mono">
-                                  {new Date(p.end_date).toLocaleDateString(
-                                    lang === "ar" ? "ar-BH-u-nu-latn" : "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    },
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/50">—</span>
-                        )}
-                      </td>
-
-                      {/* Status Toggle Switch */}
-                      <td className="px-6 py-4.5 text-center">
-                        <div className="flex flex-col items-center justify-center gap-1.5">
-                          <Switch
-                            checked={p.is_active}
-                            onCheckedChange={() => toggleActive(p)}
-                            disabled={isExpired || isCapReached}
-                            className="data-[state=checked]:bg-emerald-500 scale-90"
-                            aria-label="Toggle Status"
-                          />
-                          {statusBadge}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => beginEdit(p)}
-                            className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-muted-foreground hover:text-foreground"
-                            aria-label="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive/80 hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                            onClick={() => remove(p)}
-                            aria-label="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {/* 5. Desktop Work Queue */}
+      <div className="hidden sm:block">
+        <DiscountsWorkQueue
+          lang={ar ? "ar" : "en"}
+          promos={displayedPromos}
+          currency={currency}
+          analyticsData={analyticsQ.data}
+          onEdit={beginEdit}
+          onToggleActive={toggleActive}
+          onDelete={remove}
+        />
+      </div>
 
       {/* Editor Modal Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>

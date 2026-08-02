@@ -7,6 +7,7 @@ This document outlines the Continuous Integration (CI) architecture, branch prot
 ## 1. CI Pipeline Overview
 
 The CI pipeline is implemented via GitHub Actions in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). It automatically triggers on:
+
 - Every Pull Request targeting the `main` branch.
 - Every direct push to the `main` branch.
 
@@ -118,6 +119,7 @@ Deployment is strictly separated from validation. Validating a PR does not autom
 ### Rollback Checklist
 
 #### A. Cloudflare Workers / Frontend Rollback
+
 Cloudflare Workers maintains a versioned deployment history. If a deployment causes runtime issues:
 
 1. List recent worker deployments:
@@ -134,6 +136,7 @@ Cloudflare Workers maintains a versioned deployment history. If a deployment cau
    ```
 
 #### B. Database Migration Rollback Strategy
+
 SQL migrations in `supabase/migrations/` should be designed to be backwards-compatible whenever possible (e.g. additive column additions before removing deprecated columns).
 
 1. If a migration failure occurs:
@@ -142,5 +145,6 @@ SQL migrations in `supabase/migrations/` should be designed to be backwards-comp
 2. Never modify or delete previously committed migration files that have already been applied to production environments.
 
 #### C. Secret & Asset Safeguards
+
 - Never place secrets in source code, committed `.env` files, browser bundles, or test fixtures.
 - Private receipts and documents are stored in Cloudflare R2 private bucket with presigned URLs only; public media assets are served via R2 public bucket.

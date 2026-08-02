@@ -267,32 +267,46 @@ export function StorefrontProvider({
   const langKey = `storefront-lang:${brand.slug}`;
   const wishlistKey = `storefront-wishlist:${brand.slug}`;
 
-  const [lang, setLangState] = useState<StoreLang>("ar");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [wishlist, setWishlist] = useState<string[]>([]);
-
-  useEffect(() => {
+  const [lang, setLangState] = useState<StoreLang>(() => {
+    if (typeof window === "undefined") return "ar";
     try {
       const l = localStorage.getItem(langKey);
-      if (l === "en" || l === "ar") setLangState(l);
+      if (l === "en" || l === "ar") return l;
+    } catch {
+      /* ignore storage error */
+    }
+    return "ar";
+  });
 
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
       const c = localStorage.getItem(cartKey);
       if (c) {
         const stored = JSON.parse(c) as Array<Partial<CartItem> & { variant_id: string }>;
-        setCart(
-          stored.map((item) => ({
-            ...item,
-            cart_line_id: item.cart_line_id || cartLineId(item as CartItem),
-          })) as CartItem[],
-        );
+        return stored.map((item) => ({
+          ...item,
+          cart_line_id: item.cart_line_id || cartLineId(item as CartItem),
+        })) as CartItem[];
       }
+    } catch {
+      /* ignore storage error */
+    }
+    return [];
+  });
 
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
       const w = localStorage.getItem(wishlistKey);
       if (w) {
-        setWishlist(Array.from(new Set(JSON.parse(w) as string[])));
+        return Array.from(new Set(JSON.parse(w) as string[]));
       }
-    } catch {}
-  }, [brand.slug, cartKey, langKey, wishlistKey]);
+    } catch {
+      /* ignore storage error */
+    }
+    return [];
+  });
 
   const [session, setSession] = useState<Session | null>(null);
   const [isStoreMember, setIsStoreMember] = useState(false);
@@ -301,13 +315,17 @@ export function StorefrontProvider({
   useEffect(() => {
     try {
       localStorage.setItem(cartKey, JSON.stringify(cart));
-    } catch {}
+    } catch {
+      /* ignore storage error */
+    }
   }, [cart, cartKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
-    } catch {}
+    } catch {
+      /* ignore storage error */
+    }
   }, [wishlist, wishlistKey]);
 
   const checkMembership = useCallback(
@@ -346,10 +364,12 @@ export function StorefrontProvider({
       void checkMembership(nextSession);
     });
     const { data } = supabase.auth.onAuthStateChange((_evt, nextSession) => {
-      setSession(nextSession);
-      // Run the RPC outside the auth callback to avoid blocking token storage.
+      // Run auth updates outside the synchronous callback to prevent pre-mount setState
       window.setTimeout(() => {
-        if (active) void checkMembership(nextSession);
+        if (active) {
+          setSession(nextSession);
+          void checkMembership(nextSession);
+        }
       }, 0);
     });
     return () => {
@@ -363,7 +383,9 @@ export function StorefrontProvider({
       setLangState(l);
       try {
         localStorage.setItem(langKey, l);
-      } catch {}
+      } catch {
+        /* ignore storage error */
+      }
     },
     [langKey],
   );

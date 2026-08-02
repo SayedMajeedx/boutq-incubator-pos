@@ -67,6 +67,7 @@ export function DeliveryAddressCard({
             variant="ghost"
             size="sm"
             className="h-8 gap-1 px-2"
+            aria-label={isAr ? "نسخ العنوان" : "Copy address"}
             onClick={async () => {
               await navigator.clipboard.writeText(copyText);
               toast.success(isAr ? "تم نسخ العنوان" : "Address copied");
@@ -81,6 +82,7 @@ export function DeliveryAddressCard({
                 target="_blank"
                 rel="noreferrer"
                 href={`https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`}
+                aria-label={isAr ? "فتح العنوان في الخريطة" : "Open address in map"}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 {!compact && (isAr ? "الخريطة" : "Map")}

@@ -6,8 +6,8 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 0, // Fetch fresh data on mount to ensure real-time accuracy and zero latency in data state
-        gcTime: 1000 * 60 * 5, // Keep unused cache in memory for 5 minutes
+        staleTime: 1000 * 30, // 30s stale time for instant cached transitions
+        gcTime: 1000 * 60 * 10, // 10 minutes cache retention
         refetchOnWindowFocus: false, // Prevent aggressive and redundant database refetches when switching browser tabs
         refetchOnReconnect: "always",
         retry: 1, // Fail fast on bad networks rather than hanging the UI
@@ -19,8 +19,10 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    defaultPreload: false, // Disable hover preloading to free up CPU and network threads, restoring buttery-smooth scrolling
-    defaultPreloadStaleTime: 0,
+    defaultPreload: "intent", // Preload route chunks & beforeLoad on hover/touch for instantaneous transitions
+    defaultPreloadStaleTime: 1000 * 30,
+    defaultPendingMs: 120, // Render pending component if transition exceeds 120ms to prevent stale content visibility
+    defaultPendingMinMs: 150, // Avoid flicker on fast transitions
   });
 
   return router;

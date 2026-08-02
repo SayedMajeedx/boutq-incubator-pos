@@ -90,7 +90,7 @@ test.beforeEach(async ({ page }) => {
       refresh_token: "mock-refresh-token",
       user: {
         id: "test-user-id",
-        email: "admin@boutq.store",
+        email: "majeed@hotmail.it",
         role: "authenticated",
         aud: "authenticated",
       },
@@ -98,7 +98,9 @@ test.beforeEach(async ({ page }) => {
     };
     try {
       window.localStorage.setItem("sb-ikciahnuqhemvnyfvbyp-auth-token", JSON.stringify(session));
-    } catch {}
+    } catch {
+      /* ignore storage error */
+    }
   });
 
   await page.route("**/auth/v1/user**", async (route) => {
@@ -107,7 +109,7 @@ test.beforeEach(async ({ page }) => {
       contentType: "application/json",
       body: JSON.stringify({
         id: "test-user-id",
-        email: "admin@boutq.store",
+        email: "majeed@hotmail.it",
         role: "authenticated",
         aud: "authenticated",
         user_metadata: {},
@@ -123,8 +125,9 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify([
         {
           id: "test-user-id",
+          email: "majeed@hotmail.it",
           status: "active",
-          role: "brand_admin",
+          role: "super_admin",
           brand_id: "test-brand",
           brand: {
             id: "test-brand",
@@ -184,20 +187,28 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.route("**/rest/v1/customers?**", async (route) => {
+    const isSingle = (route.request().headers()["accept"] ?? "").includes("vnd.pgrst.object");
+    const customer = {
+      id: "cust-1",
+      name: "Fatima Al-Mansoor",
+      phone: "97339001122",
+      email: "fatima@example.com",
+      notes: null,
+      brand_id: "test-brand",
+    };
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify([
-        { id: "cust-1", name: "Fatima Al-Mansoor", phone: "97339001122", brand_id: "test-brand" },
-      ]),
+      body: JSON.stringify(isSingle ? customer : [customer]),
     });
   });
 
   await page.route("**/rest/v1/orders?**", async (route) => {
+    const isSingle = (route.request().headers()["accept"] ?? "").includes("vnd.pgrst.object");
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(mockOrders),
+      body: JSON.stringify(isSingle ? mockOrders[0] : mockOrders),
     });
   });
 
@@ -222,8 +233,23 @@ test("Comprehensive 1920x1080 Desktop UX Audit across all routes", async ({ page
   const consoleLogs: Array<{ type: string; text: string }> = [];
   page.on("console", (msg) => {
     if (msg.type() === "error" || msg.type() === "warning") {
-      console.log(`[BROWSER ${msg.type().toUpperCase()}]`, msg.text());
-      consoleLogs.push({ type: msg.type(), text: msg.text() });
+      const text = msg.text();
+      const lower = text.toLowerCase();
+      const isNetworkNoise =
+        lower.includes("websocket") ||
+        lower.includes("wss://") ||
+        lower.includes("ws://") ||
+        lower.includes("failed to load resource") ||
+        lower.startsWith("typeerror: failed to fetch") ||
+        (lower.includes("[realtime] subscription error") && lower.includes("transport failure")) ||
+        lower.includes("net::err_") ||
+        lower.includes("status of 401") ||
+        lower.includes("status of 403") ||
+        lower.includes("status of 404");
+      if (!isNetworkNoise) {
+        console.log(`[BROWSER ${msg.type().toUpperCase()}]`, text);
+        consoleLogs.push({ type: msg.type(), text });
+      }
     }
   });
 
@@ -250,7 +276,9 @@ test("Comprehensive 1920x1080 Desktop UX Audit across all routes", async ({ page
       const cursor = await el.evaluate((node) => window.getComputedStyle(node).cursor);
       // Log elements that don't have cursor: pointer
       if (cursor !== "pointer") {
-        console.log(`[UX CURSOR WARNING] Interactive element index ${i} has cursor: '${cursor}' instead of 'pointer'`);
+        console.log(
+          `[UX CURSOR WARNING] Interactive element index ${i} has cursor: '${cursor}' instead of 'pointer'`,
+        );
       }
     }
   }
@@ -264,15 +292,26 @@ test("Comprehensive 1920x1080 Desktop UX Audit across all routes", async ({ page
   const orderRows = page.locator("table tbody tr");
   if ((await orderRows.count()) > 0) {
     const firstRow = orderRows.first();
-    await firstRow.hover();
-    const bgBefore = await firstRow.evaluate((node) => window.getComputedStyle(node).backgroundColor);
-    console.log("Order row hover computed background:", bgBefore);
+    const firstCell = firstRow.locator("td").first();
+    await firstCell.hover();
+    const cellBg = await firstCell.evaluate(
+      (node) => window.getComputedStyle(node).backgroundColor,
+    );
+    console.log("Order row hover computed cell background:", cellBg);
+    expect(cellBg, "Hovered order row cell background must not be transparent").not.toBe(
+      "rgba(0, 0, 0, 0)",
+    );
+    expect(cellBg, "Hovered order row cell background must not be transparent").not.toBe(
+      "oklab(0 0 0 / 0)",
+    );
   }
 
   // 3. Audit Inventory (Products)
   console.log("--- AUDITING INVENTORY / PRODUCTS ---");
-  await page.goto("/admin/b/test-brand/inventory");
+  const invResponse = await page.goto("/admin/b/test-brand/inventory");
+  expect(invResponse?.status() ?? 200).toBeLessThan(400);
   await page.waitForLoadState("networkidle");
+  await expect(page.locator("main").first()).toBeVisible();
 
   // Check 'New Product' button & modal UX
   const newProductBtn = page.getByRole("button", { name: /New Product|منتج جديد/i }).first();
@@ -297,6 +336,37 @@ test("Comprehensive 1920x1080 Desktop UX Audit across all routes", async ({ page
   await page.goto("/admin/b/test-brand/settings");
   await page.waitForLoadState("networkidle");
 
+  const remainingAdminRoutes = [
+    "/admin/b/test-brand/customers",
+    "/admin/b/test-brand/customers/cust-1",
+    "/admin/b/test-brand/orders/order-101",
+    "/admin/b/test-brand/categories",
+    "/admin/b/test-brand/campaigns",
+    "/admin/b/test-brand/discounts",
+    "/admin/b/test-brand/expenses",
+    "/admin/b/test-brand/communications",
+    "/admin/b/test-brand/pages",
+    "/admin/b/test-brand/team",
+    "/admin/b/test-brand/integrations",
+    "/admin/b/test-brand/reports/sales",
+    "/admin/b/test-brand/reports/products",
+    "/admin/b/test-brand/reports/customers",
+    "/admin/b/test-brand/reports/export",
+  ];
+
+  for (const path of remainingAdminRoutes) {
+    const response = await page.goto(path);
+    expect(response?.status() ?? 200, `${path} returned an invalid response`).toBeLessThan(400);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("main h1"), `${path} must expose one page heading`).toHaveCount(1);
+    await expect(page.locator("main h1"), `${path} page heading must be visible`).toBeVisible();
+    const hasDocumentOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasDocumentOverflow, `${path} has document-level horizontal overflow`).toBe(false);
+  }
+
   console.log("=== DESKTOP UX AUDIT COMPLETE ===");
   console.log("Total captured console warnings/errors:", consoleLogs.length);
+  expect(consoleLogs, "Desktop routes emitted application errors or warnings").toEqual([]);
 });

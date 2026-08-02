@@ -123,7 +123,6 @@ export function StorefrontAnalytics() {
 
     // Defer 3rd-party analytics until user interaction or 5s fallback to protect LCP & TBT
     let loaded = false;
-    let timer: ReturnType<typeof setTimeout>;
 
     const trigger = () => {
       if (loaded) return;
@@ -131,6 +130,8 @@ export function StorefrontAnalytics() {
       cleanup();
       loadScripts();
     };
+
+    const timer = setTimeout(trigger, 5000);
 
     const cleanup = () => {
       window.removeEventListener("scroll", trigger);
@@ -144,7 +145,6 @@ export function StorefrontAnalytics() {
     window.addEventListener("pointermove", trigger, { passive: true, once: true });
     window.addEventListener("touchstart", trigger, { passive: true, once: true });
     window.addEventListener("click", trigger, { passive: true, once: true });
-    timer = setTimeout(trigger, 5000);
 
     return () => {
       cleanup();

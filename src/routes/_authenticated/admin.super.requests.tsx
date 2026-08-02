@@ -44,6 +44,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { SuperCommandHeader } from "@/components/super/SuperCommandHeader";
+import { SuperScopeSwitcher, type SuperScope } from "@/components/super/SuperScopeSwitcher";
+
 export const Route = createFileRoute("/_authenticated/admin/super/requests")({
   beforeLoad: async () => {
     const {
@@ -79,6 +82,7 @@ type TenantRequest = {
 function SuperRequestsPage() {
   const { lang } = useI18n();
   const qc = useQueryClient();
+  const [activeScope, setActiveScope] = useState<SuperScope>("requests");
 
   // Onboarding price states
   const [priceInput, setPriceInput] = useState("");
@@ -268,36 +272,26 @@ function SuperRequestsPage() {
     }
   };
 
+  const pendingRequests = requestsQuery.data ?? [];
+
   return (
-    <div
-      className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
-      dir={lang === "ar" ? "rtl" : "ltr"}
-    >
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-6">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300 flex items-center gap-2">
-            <Building2 className="h-8 w-8 text-primary" />
-            <span>{lang === "ar" ? "طلبات التسجيل الجديدة" : "New Tenant Requests"}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {lang === "ar"
-              ? "مراجعة وتدقيق طلبات المساحات التجريبية والرسمية قيد المعالجة لتفعيلها يدوياً."
-              : "Review pending free trials and paid official activation queues to coordinate manual deployments."}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void qc.invalidateQueries();
-          }}
-          className="self-start sm:self-center gap-1.5 shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>{lang === "ar" ? "تحديث الصفوف" : "Sync Queue"}</span>
-        </Button>
-      </div>
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <SuperCommandHeader
+        lang={lang === "ar" ? "ar" : "en"}
+        pendingCount={pendingRequests.length}
+        onRefresh={() => {
+          void qc.invalidateQueries();
+        }}
+      />
+
+      {/* 2. Scope Switcher */}
+      <SuperScopeSwitcher
+        lang={lang === "ar" ? "ar" : "en"}
+        activeScope={activeScope}
+        onScopeChange={(scope) => setActiveScope(scope)}
+        pendingCount={pendingRequests.length}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Admin Live Pricing Control Panel */}

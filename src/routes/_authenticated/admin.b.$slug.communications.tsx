@@ -33,34 +33,64 @@ export const Route = createFileRoute("/_authenticated/admin/b/$slug/communicatio
   component: CommunicationsPage,
 });
 
+import { CommunicationsCommandHeader } from "@/components/communications/CommunicationsCommandHeader";
+import {
+  CommunicationsScopeSwitcher,
+  type CommunicationsScope,
+} from "@/components/communications/CommunicationsScopeSwitcher";
+
 function CommunicationsPage() {
   const t = useT();
   const { lang } = useI18n();
   const isAr = lang === "ar";
   const brand = useBrand();
   const brandId = brand.id;
+  const [activeScope, setActiveScope] = useState<CommunicationsScope>("recipients");
+  const [addingRecipient, setAddingRecipient] = useState(false);
+
+  const recipientsQ = useQuery({
+    queryKey: ["brand-notification-recipients", brandId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("brand_notification_recipients")
+        .select("*")
+        .eq("brand_id", brandId);
+      if (error) return [];
+      return data ?? [];
+    },
+  });
 
   return (
-    <div
-      className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
-      dir={isAr ? "rtl" : "ltr"}
-    >
-      <div>
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary mb-1.5 font-semibold">
-          <Mail className="h-3.5 w-3.5" /> {isAr ? "الاتصالات والمراسلات" : "Communications"}
-        </div>
-        <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-          {isAr ? "سجل المراسلات" : "Communications & Alerts"}
-        </h1>
-        <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-          {isAr
-            ? "أدر مستلمي التنبيهات الإدارية وتتبع سجل رسائل البريد المرسلة للعملاء."
-            : "Manage admin alert recipients and review outbound notification logs in one unified hub."}
-        </p>
-      </div>
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <CommunicationsCommandHeader
+        lang={isAr ? "ar" : "en"}
+        brandName={(isAr ? brand.name_ar : brand.name_en) || brand.name_en || brand.slug}
+        recipientCount={recipientsQ.data?.length ?? 0}
+        onAddRecipient={() => {
+          setActiveScope("recipients");
+          setAddingRecipient(true);
+        }}
+      />
 
-      <AdminNotificationRecipientsCard brandId={brandId} isAr={isAr} />
-      <EmailActivityCard brandId={brandId} isAr={isAr} />
+      {/* 2. Scope Switcher */}
+      <CommunicationsScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        activeScope={activeScope}
+        onScopeChange={(scope) => setActiveScope(scope)}
+        recipientCount={recipientsQ.data?.length ?? 0}
+      />
+
+      {activeScope === "recipients" && (
+        <AdminNotificationRecipientsCard
+          brandId={brandId}
+          isAr={isAr}
+          externalAdding={addingRecipient}
+          onResetAdding={() => setAddingRecipient(false)}
+        />
+      )}
+
+      {activeScope === "logs" && <EmailActivityCard brandId={brandId} isAr={isAr} />}
     </div>
   );
 }
@@ -90,9 +120,26 @@ const NOTIFICATION_EVENT_FIELDS = [
   { key: "receive_order_delivered", en: "Order delivered", ar: "تم توصيل الطلب" },
 ] as const;
 
-function AdminNotificationRecipientsCard({ brandId, isAr }: { brandId: string; isAr: boolean }) {
+function AdminNotificationRecipientsCard({
+  brandId,
+  isAr,
+  externalAdding,
+  onResetAdding,
+}: {
+  brandId: string;
+  isAr: boolean;
+  externalAdding?: boolean;
+  onResetAdding?: () => void;
+}) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    if (externalAdding) {
+      setAdding(true);
+      onResetAdding?.();
+    }
+  }, [externalAdding, onResetAdding]);
   const [saving, setSaving] = useState(false);
   const emptyForm = {
     name: "",
@@ -169,7 +216,7 @@ function AdminNotificationRecipientsCard({ brandId, isAr }: { brandId: string; i
 
   return (
     <Card
-      className="overflow-hidden border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-6"
+      className="overflow-hidden rounded-2xl border-border/60 bg-card/40 p-3 shadow-lg backdrop-blur-sm sm:p-6"
       dir={isAr ? "rtl" : "ltr"}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -465,7 +512,7 @@ function EmailActivityCard({ brandId, isAr }: { brandId: string; isAr: boolean }
       className="overflow-hidden border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-6"
       dir={isAr ? "rtl" : "ltr"}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
           <Mail className="h-5 w-5 mt-0.5 text-primary" />
           <div>
@@ -473,12 +520,12 @@ function EmailActivityCard({ brandId, isAr }: { brandId: string; isAr: boolean }
             <p className="text-sm text-muted-foreground max-w-3xl mt-1">{labels.description}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Select
             value={channel}
             onValueChange={(value) => setChannel(value as "all" | "customer" | "admin")}
           >
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="h-9 flex-1 sm:w-[160px] sm:flex-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -514,7 +561,59 @@ function EmailActivityCard({ brandId, isAr }: { brandId: string; isAr: boolean }
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="grid gap-2.5 sm:hidden" aria-label={labels.title}>
+            {paginatedRows.map((row) => (
+              <article
+                key={row.id}
+                className="rounded-xl border border-border/70 bg-background/75 p-3 shadow-xs"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold">{eventLabel(row.event_type)}</p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground" dir="ltr">
+                      {row.recipient || "—"}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}
+                  >
+                    {statusLabel(row.status)}
+                  </span>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/60 pt-3 text-xs">
+                  <div>
+                    <dt className="text-muted-foreground">{labels.channel}</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      {row.channel === "customer" ? labels.customer : labels.admin}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{isAr ? "المزود" : "Provider"}</dt>
+                    <dd className="mt-0.5 font-semibold">{providerLabel(row.provider)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{labels.order}</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      {row.invoice_number ? `#${row.invoice_number}` : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{labels.time}</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      {new Date(row.created_at).toLocaleString(isAr ? "ar-BH-u-nu-latn" : "en-GB")}
+                    </dd>
+                  </div>
+                </dl>
+                {detailLabel(row) !== "—" && (
+                  <p className="mt-3 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
+                    {detailLabel(row)}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-lg border sm:block">
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>

@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker";
 import { useI18n } from "@/lib/i18n";
 import { fetchReportingOverview } from "@/lib/reporting.functions";
 import { DatePickerWithRange } from "@/components/reports/date-range-picker";
+import { ReportsToolbar } from "@/components/reports/ReportsToolbar";
 import { KpiCard } from "@/components/reports/kpi-card";
 import { formatMoney } from "@/lib/format";
 import {
@@ -62,19 +63,13 @@ function ReportsOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <DatePickerWithRange date={date} setDate={setDate} />
-        <div className="flex items-center gap-3 rounded-xl bg-[#faf7f6] px-3 py-2">
-          <Switch
-            id="historical"
-            checked={includeHistorical}
-            onCheckedChange={setIncludeHistorical}
-          />
-          <Label htmlFor="historical" className="text-sm">
-            {lang === "ar" ? "تضمين الطلبات المؤرشفة" : "Include archived orders"}
-          </Label>
-        </div>
-      </div>
+      <ReportsToolbar
+        lang={lang === "ar" ? "ar" : "en"}
+        date={date}
+        setDate={setDate}
+        includeHistorical={includeHistorical}
+        setIncludeHistorical={setIncludeHistorical}
+      />
 
       {query.isLoading ? (
         <Skeleton />

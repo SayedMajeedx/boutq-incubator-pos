@@ -25,7 +25,7 @@ function ThankYou() {
 
   useEffect(() => {
     clearCart();
-  }, []);
+  }, [clearCart]);
 
   return (
     <div className="mx-auto max-w-lg p-6 sm:p-8 animate-in fade-in duration-500">

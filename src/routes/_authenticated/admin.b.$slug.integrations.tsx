@@ -40,6 +40,12 @@ import { toast } from "sonner";
 import { useT, useI18n } from "@/lib/i18n";
 import { useBrand } from "@/lib/brand-context";
 
+import { IntegrationsCommandHeader } from "@/components/integrations/IntegrationsCommandHeader";
+import {
+  IntegrationsScopeSwitcher,
+  type IntegrationsCategoryScope,
+} from "@/components/integrations/IntegrationsScopeSwitcher";
+
 export const Route = createFileRoute("/_authenticated/admin/b/$slug/integrations")({
   component: IntegrationsPage,
 });
@@ -90,6 +96,7 @@ function IntegrationsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
+  const [categoryScope, setCategoryScope] = useState<IntegrationsCategoryScope>("all");
 
   const q = useQuery({
     queryKey: ["integrations", brandId],
@@ -113,213 +120,281 @@ function IntegrationsPage() {
     qc.invalidateQueries({ queryKey: ["integrations", brandId] });
   };
 
+  const rawIntegrationsData = q.data;
+  const integrationsList = useMemo(() => rawIntegrationsData ?? [], [rawIntegrationsData]);
+  const filteredIntegrations = useMemo(() => {
+    return integrationsList.filter((row) => {
+      if (categoryScope === "payments") {
+        return row.provider === "stripe" || row.provider === "tap" || row.provider === "benefit";
+      }
+      if (categoryScope === "shipping") {
+        return row.provider === "aramex" || row.provider === "posta_plus";
+      }
+      if (categoryScope === "email_ai") {
+        return (
+          row.provider === "resend_customer_email" ||
+          row.provider === "sendpulse_admin" ||
+          row.provider === "gemini"
+        );
+      }
+      return true;
+    });
+  }, [integrationsList, categoryScope]);
+
   const webhookBase =
     typeof window !== "undefined"
       ? `${window.location.origin}/api/public/webhooks`
       : "https://…/api/public/webhooks";
 
-  return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-primary mb-1.5 font-semibold">
-            <Plug className="h-3.5 w-3.5" /> {t("nav.integrations")}
-          </div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-            {t("integrations.title")}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-            {t("integrations.subtitle")}
-          </p>
-        </div>
-        <Dialog
-          open={open}
-          onOpenChange={(v) => {
-            setOpen(v);
-            if (!v) setEditing(null);
-          }}
+  if (q.isError) {
+    return (
+      <Card className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border-destructive/30 p-6 text-center">
+        <ShieldAlert className="h-8 w-8 text-destructive" aria-hidden="true" />
+        <h1 className="text-lg font-bold">
+          {isAr ? "تعذّر تحميل التكاملات" : "Integrations could not be loaded"}
+        </h1>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void q.refetch()}
+          className="min-h-11 gap-2"
         >
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => setEditing(null)}
-              className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-            >
-              <Plus className="h-4 w-4 me-2" /> {t("integrations.new")}
-            </Button>
-          </DialogTrigger>
-          <IntegrationDialog
-            brandId={brandId}
-            row={editing}
-            onSaved={() => {
-              setOpen(false);
-              setEditing(null);
-              qc.invalidateQueries({ queryKey: ["integrations", brandId] });
-            }}
-          />
-        </Dialog>
-      </div>
-
-      <Card className="overflow-hidden border border-amber-500/40 shadow-md rounded-2xl bg-amber-500/5 p-4 mb-4">
-        <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
-          <ShieldAlert className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
-          <p className="leading-relaxed">{t("integrations.warning")}</p>
-        </div>
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          {isAr ? "إعادة المحاولة" : "Try again"}
+        </Button>
       </Card>
+    );
+  }
 
-      <AnalyticsTrackingCard brandId={brandId} isAr={isAr} />
+  if (q.isLoading) {
+    return (
+      <div
+        role="status"
+        aria-label={isAr ? "جاري تحميل التكاملات" : "Loading integrations"}
+        className="space-y-3.5"
+      >
+        <div className="h-32 animate-pulse rounded-2xl bg-muted/70" />
+        <div className="h-14 animate-pulse rounded-2xl bg-muted/60" />
+        <div className="h-48 animate-pulse rounded-2xl bg-muted/50" />
+      </div>
+    );
+  }
 
-      {q.data && q.data.length === 0 ? (
-        <Card className="overflow-hidden border border-dashed border-border/80 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-12 text-center">
-          <Plug className="h-10 w-10 mx-auto text-muted-foreground mb-3 animate-pulse" />
-          <p className="text-muted-foreground">{t("integrations.none")}</p>
-        </Card>
+  return (
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <IntegrationsCommandHeader
+        lang={isAr ? "ar" : "en"}
+        brandName={(isAr ? brand.name_ar : brand.name_en) || brand.name_en || brand.slug}
+        integrationCount={integrationsList.length}
+        onNewIntegration={() => {
+          setEditing(null);
+          setOpen(true);
+        }}
+      />
+
+      {/* 2. Scope Switcher */}
+      <IntegrationsScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        activeScope={categoryScope}
+        onScopeChange={(scope) => setCategoryScope(scope)}
+        integrationCount={integrationsList.length}
+      />
+
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
+      >
+        <IntegrationDialog
+          brandId={brandId}
+          row={editing}
+          onSaved={() => {
+            setOpen(false);
+            setEditing(null);
+            qc.invalidateQueries({ queryKey: ["integrations", brandId] });
+          }}
+        />
+      </Dialog>
+
+      {categoryScope === "pixels" ? (
+        <AnalyticsTrackingCard brandId={brandId} isAr={isAr} />
       ) : (
-        <div className="grid gap-4">
-          {(q.data ?? []).map((row) => {
-            const webhookUrl = `${webhookBase}/${row.provider}/${brandId}`;
-            const preset = PROVIDER_PRESETS.find((p) => p.value === row.provider);
-            const isNoWebhookProvider =
-              row.provider === "resend_customer_email" ||
-              row.provider === "sendpulse_admin" ||
-              row.provider === "gemini";
-            return (
-              <Card
-                key={row.id}
-                className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-6 transition-all duration-300 hover:scale-[1.01] hover:border-primary/40 hover:shadow-xl"
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 rounded-lg bg-secondary/50 border border-secondary shrink-0">
-                      {getProviderIcon(row.provider)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-display text-xl font-bold tracking-tight text-foreground truncate">
-                        {preset?.label ?? row.provider}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate font-mono mt-0.5">
-                        {row.base_url || (row.provider === "gemini" ? "gemini-1.5-flash" : "—")}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span
-                      className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
-                        row.is_active
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                          : "bg-slate-500/10 text-slate-500 border-slate-500/20"
-                      }`}
-                    >
-                      {row.is_active ? t("integrations.active") : isAr ? "معطّل" : "Off"}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditing(row);
-                        setOpen(true);
-                      }}
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => del(row.id)}
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+        <>
+          <Card className="overflow-hidden border border-amber-500/40 shadow-md rounded-2xl bg-amber-500/5 p-4">
+            <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+              <ShieldAlert className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+              <p className="leading-relaxed">{t("integrations.warning")}</p>
+            </div>
+          </Card>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-secondary/20 border border-secondary/30 rounded-lg p-4">
-                  <MaskedRow
-                    label={
-                      row.provider === "resend_customer_email"
-                        ? isAr
-                          ? "بريد المُرسل المعتمد"
-                          : "Verified sender email"
-                        : row.provider === "gemini"
-                          ? isAr
-                            ? "نموذج الذكاء الاصطناعي (اختياري)"
-                            : "AI Model (Optional)"
-                          : t("integrations.apiKey")
-                    }
-                    value={
-                      row.provider === "gemini"
-                        ? row.base_url || "gemini-1.5-flash"
-                        : row.api_key_masked
-                    }
-                  />
-                  <MaskedRow
-                    label={
-                      row.provider === "resend_customer_email"
-                        ? isAr
-                          ? "مفتاح API الخاص بـ Resend"
-                          : "Resend API key"
-                        : row.provider === "gemini"
-                          ? isAr
-                            ? "مفتاح API الخاص بـ Gemini"
-                            : "Gemini API key"
-                          : t("integrations.webhookSecret")
-                    }
-                    value={
-                      row.provider === "gemini" ? row.api_key_masked : row.webhook_secret_masked
-                    }
-                  />
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-border/80 text-xs">
-                  {isNoWebhookProvider ? (
-                    <div className="flex items-center gap-2 text-muted-foreground bg-primary/5 border border-primary/10 rounded-lg px-3 py-2.5">
-                      {row.provider === "gemini" ? (
-                        <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
-                      ) : (
-                        <Mail className="h-4 w-4 text-primary shrink-0" />
-                      )}
-                      <p className="leading-normal">
-                        {row.provider === "gemini"
-                          ? isAr
-                            ? "يتم استخدام تكامل Gemini هذا مباشرةً لترجمة عناوين المنتجات والوصف تلقائياً وتفصيل مخرجات صياغة المحتوى الثنائي اللغة."
-                            : "This Gemini integration is used directly for super-high-quality storefront translations and product copywriting."
-                          : isAr
-                            ? "يستخدم هذا المزود مباشرةً من خدمة البريد الآمنة في Boutق عبر اتصال بروتوكول HTTP الآمن. لا يلزم إعداد رابط Webhook لدى المزود."
-                            : "This provider is used directly by Boutq's secure email service over high-speed HTTPS. No provider webhook URL is required."}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-3">
-                      <p className="text-muted-foreground mb-1.5 font-medium">
-                        {t("integrations.webhookHint")}
-                      </p>
-                      <div className="flex items-center gap-2 bg-background/50 border rounded-md p-1.5 pl-3">
-                        <code className="flex-1 truncate font-mono text-xs">{webhookUrl}</code>
+          {filteredIntegrations.length === 0 ? (
+            <Card className="overflow-hidden border border-dashed border-border/80 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-8 sm:p-12 text-center">
+              <Plug className="h-10 w-10 mx-auto text-muted-foreground mb-3 animate-pulse" />
+              <p className="text-muted-foreground">{t("integrations.none")}</p>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {filteredIntegrations.map((row) => {
+                const webhookUrl = `${webhookBase}/${row.provider}/${brandId}`;
+                const preset = PROVIDER_PRESETS.find((p) => p.value === row.provider);
+                const isNoWebhookProvider =
+                  row.provider === "resend_customer_email" ||
+                  row.provider === "sendpulse_admin" ||
+                  row.provider === "gemini";
+                return (
+                  <Card
+                    key={row.id}
+                    className="overflow-hidden border border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm p-3 sm:p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-xl"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2.5 rounded-lg bg-secondary/50 border border-secondary shrink-0">
+                          {getProviderIcon(row.provider)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-display text-xl font-bold tracking-tight text-foreground truncate">
+                            {preset?.label ?? row.provider}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate font-mono mt-0.5">
+                            {row.base_url || (row.provider === "gemini" ? "gemini-1.5-flash" : "—")}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
+                            row.is_active
+                              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                              : "bg-slate-500/10 text-slate-500 border-slate-500/20"
+                          }`}
+                        >
+                          {row.is_active ? t("integrations.active") : isAr ? "معطّل" : "Off"}
+                        </span>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => {
-                            navigator.clipboard?.writeText(webhookUrl);
-                            toast.success("Copied");
+                            setEditing(row);
+                            setOpen(true);
                           }}
-                          className="h-7 px-2 shrink-0"
+                          aria-label={
+                            isAr
+                              ? `تعديل ${preset?.label ?? row.provider}`
+                              : `Edit ${preset?.label ?? row.provider}`
+                          }
+                          className="h-11 w-11 text-muted-foreground hover:text-foreground sm:h-8 sm:w-8 transition-all"
                         >
-                          <Copy className="h-3.5 w-3.5" />
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => del(row.id)}
+                          aria-label={
+                            isAr
+                              ? `حذف ${preset?.label ?? row.provider}`
+                              : `Delete ${preset?.label ?? row.provider}`
+                          }
+                          className="h-11 w-11 text-muted-foreground hover:text-destructive sm:h-8 sm:w-8 transition-all"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {row.notes && (
-                  <p className="text-xs text-muted-foreground mt-3 italic bg-secondary/10 px-3 py-1.5 rounded border border-secondary/20">
-                    {row.notes}
-                  </p>
-                )}
-              </Card>
-            );
-          })}
-        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-secondary/20 border border-secondary/30 rounded-lg p-4">
+                      <MaskedRow
+                        label={
+                          row.provider === "resend_customer_email"
+                            ? isAr
+                              ? "بريد المُرسل المعتمد"
+                              : "Verified sender email"
+                            : row.provider === "gemini"
+                              ? isAr
+                                ? "نموذج الذكاء الاصطناعي (اختياري)"
+                                : "AI Model (Optional)"
+                              : t("integrations.apiKey")
+                        }
+                        value={
+                          row.provider === "gemini"
+                            ? row.base_url || "gemini-1.5-flash"
+                            : row.api_key_masked
+                        }
+                      />
+                      <MaskedRow
+                        label={
+                          row.provider === "resend_customer_email"
+                            ? isAr
+                              ? "مفتاح API الخاص بـ Resend"
+                              : "Resend API key"
+                            : row.provider === "gemini"
+                              ? isAr
+                                ? "مفتاح API الخاص بـ Gemini"
+                                : "Gemini API key"
+                              : t("integrations.webhookSecret")
+                        }
+                        value={
+                          row.provider === "gemini" ? row.api_key_masked : row.webhook_secret_masked
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-border/80 text-xs">
+                      {isNoWebhookProvider ? (
+                        <div className="flex items-center gap-2 text-muted-foreground bg-primary/5 border border-primary/10 rounded-lg px-3 py-2.5">
+                          {row.provider === "gemini" ? (
+                            <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
+                          ) : (
+                            <Mail className="h-4 w-4 text-primary shrink-0" />
+                          )}
+                          <p className="leading-normal">
+                            {row.provider === "gemini"
+                              ? isAr
+                                ? "يتم استخدام تكامل Gemini هذا مباشرةً لترجمة عناوين المنتجات والوصف تلقائياً وتفصيل مخرجات صياغة المحتوى الثنائي اللغة."
+                                : "This Gemini integration is used directly for super-high-quality storefront translations and product copywriting."
+                              : isAr
+                                ? "يستخدم هذا المزود مباشرةً من خدمة البريد الآمنة في Boutق عبر اتصال بروتوكول HTTP الآمن. لا يلزم إعداد رابط Webhook لدى المزود."
+                                : "This provider is used directly by Boutq's secure email service over high-speed HTTPS. No provider webhook URL is required."}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-3">
+                          <p className="text-muted-foreground mb-1.5 font-medium">
+                            {t("integrations.webhookHint")}
+                          </p>
+                          <div className="flex min-w-0 items-center gap-2 bg-background/50 border rounded-md p-1.5 ps-3">
+                            <code className="flex-1 truncate font-mono text-xs">{webhookUrl}</code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(webhookUrl);
+                                toast.success("Copied");
+                              }}
+                              aria-label={isAr ? "نسخ رابط Webhook" : "Copy webhook URL"}
+                              className="h-7 px-2 shrink-0"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {row.notes && (
+                      <p className="text-xs text-muted-foreground mt-3 italic bg-secondary/10 px-3 py-1.5 rounded border border-secondary/20">
+                        {row.notes}
+                      </p>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -397,7 +472,7 @@ function AnalyticsTrackingCard({ brandId, isAr }: { brandId: string; isAr: boole
     toast.success(isAr ? "تم حفظ إعدادات التتبع" : "Tracking settings saved");
   };
   return (
-    <Card className="mb-6 p-5" dir={isAr ? "rtl" : "ltr"}>
+    <Card className="mb-6 p-3 sm:p-5" dir={isAr ? "rtl" : "ltr"}>
       <div className="mb-4">
         <h2 className="font-display text-xl">
           {isAr ? "التحليلات والتتبع" : "Analytics & Tracking"}
@@ -610,7 +685,7 @@ function IntegrationDialog({
   };
 
   return (
-    <DialogContent className="max-w-lg">
+    <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg overflow-y-auto p-4 sm:p-6">
       <DialogHeader>
         <DialogTitle>
           {row ? (isAr ? "تعديل التكامل" : "Edit integration") : t("integrations.new")}
@@ -700,7 +775,7 @@ function IntegrationDialog({
         </div>
       </div>
       <DialogFooter>
-        <Button onClick={save} disabled={saving}>
+        <Button onClick={save} disabled={saving} className="min-h-11 w-full sm:w-auto">
           {t("common.save")}
         </Button>
       </DialogFooter>

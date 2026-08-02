@@ -102,7 +102,7 @@ export const importProductCatalog = createServerFn({ method: "POST" })
       for (const prod of data.products) {
         try {
           let finalImageUrl = prod.image_url;
-          let mediaArray: any[] = [];
+          const mediaArray: any[] = [];
 
           // Server-side download of external product image URLs and upload to public R2
           if (

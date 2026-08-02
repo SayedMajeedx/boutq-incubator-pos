@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Mail,
+  MessageCircle,
   MapPin,
   Pencil,
   Phone,
@@ -197,7 +198,7 @@ function CustomerProfilePage() {
 
   return (
     <div
-      className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
+      className="mx-auto max-w-7xl space-y-4 p-1 sm:p-2 animate-fade-in"
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -219,13 +220,46 @@ function CustomerProfilePage() {
               : `${orders.length} order${orders.length === 1 ? "" : "s"} linked to this customer`}
           </p>
         </div>
-        <Button
-          onClick={() => setEditing(true)}
-          className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95"
-        >
-          <Pencil className="h-4 w-4 me-2" />
-          {lang === "ar" ? "تعديل الملف" : "Edit Profile"}
-        </Button>
+        <div className="grid grid-cols-3 gap-2 sm:flex">
+          {customer.phone && (
+            <Button asChild variant="outline" className="min-h-11 px-3">
+              <a
+                href={`tel:${customer.phone}`}
+                aria-label={lang === "ar" ? "الاتصال بالعميل" : "Call customer"}
+              >
+                <Phone className="h-4 w-4 sm:me-2" />
+                <span className="hidden sm:inline">{lang === "ar" ? "اتصال" : "Call"}</span>
+              </a>
+            </Button>
+          )}
+          {customer.phone && (
+            <Button asChild variant="outline" className="min-h-11 px-3 text-emerald-700">
+              <a
+                href={`https://wa.me/${customer.phone.replace(/[^\d]/g, "")}`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={
+                  lang === "ar" ? "مراسلة العميل عبر واتساب" : "Message customer on WhatsApp"
+                }
+              >
+                <MessageCircle className="h-4 w-4 sm:me-2" />
+                <span className="hidden sm:inline">{lang === "ar" ? "واتساب" : "WhatsApp"}</span>
+              </a>
+            </Button>
+          )}
+          <Button
+            onClick={() => setEditing(true)}
+            className="min-h-11 shadow-sm transition-all duration-200 hover:shadow active:scale-95"
+          >
+            <Pencil className="h-4 w-4 sm:me-2" />
+            <span className="hidden sm:inline">
+              {lang === "ar" ? "تعديل الملف" : "Edit Profile"}
+            </span>
+            <span className="sr-only sm:hidden">
+              {lang === "ar" ? "تعديل الملف" : "Edit Profile"}
+            </span>
+          </Button>
+        </div>
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
@@ -254,7 +288,10 @@ function CustomerProfilePage() {
               </h2>
               <p className="text-xs text-muted-foreground mt-1">
                 {lang === "ar" ? "إجمالي الإنفاق:" : "Lifetime Spend:"}{" "}
-                <span className="font-bold text-primary font-mono">{formatMoney(totalSpent, "BHD")}</span> ({orders.length} {lang === "ar" ? "طلبات" : "orders"})
+                <span className="font-bold text-primary font-mono">
+                  {formatMoney(totalSpent, "BHD")}
+                </span>{" "}
+                ({orders.length} {lang === "ar" ? "طلبات" : "orders"})
               </p>
             </div>
             <div className="space-y-4 p-5 text-sm">
@@ -322,80 +359,119 @@ function CustomerProfilePage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] text-sm whitespace-nowrap">
-                <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
-                  <tr>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
-                      {lang === "ar" ? "رقم الطلب" : "Order ID #"}
-                    </th>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
-                      {lang === "ar" ? "التاريخ" : "Date"}
-                    </th>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
-                      {lang === "ar" ? "الحالة" : "Status"}
-                    </th>
-                    <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
-                      {lang === "ar" ? "طريقة الدفع" : "Payment Method"}
-                    </th>
-                    <th className="p-4 text-end font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
-                      {lang === "ar" ? "الإجمالي" : "Total Amount"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => (
-                    <tr
-                      key={order.id}
-                      tabIndex={0}
-                      className="cursor-pointer border-t border-border transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
-                      onClick={() =>
-                        navigate({
-                          to: "/admin/b/$slug/orders/$id",
-                          params: { slug, id: order.id },
-                        })
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ")
-                          navigate({
-                            to: "/admin/b/$slug/orders/$id",
-                            params: { slug, id: order.id },
-                          });
-                      }}
-                    >
-                      <td className="p-4 whitespace-nowrap font-mono font-bold">
-                        <Link
-                          to="/admin/b/$slug/orders/$id"
-                          params={{ slug, id: order.id }}
-                          className="font-semibold text-primary hover:underline"
-                        >
+            <>
+              <div className="space-y-2 p-3 sm:hidden">
+                {orders.map((order) => (
+                  <button
+                    key={order.id}
+                    type="button"
+                    onClick={() =>
+                      navigate({ to: "/admin/b/$slug/orders/$id", params: { slug, id: order.id } })
+                    }
+                    className="w-full rounded-xl border border-border/60 bg-background/70 p-3 text-start transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-sm font-bold text-primary">
                           #{order.invoice_number}
-                        </Link>
-                      </td>
-                      <td className="p-4 text-muted-foreground whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          <CalendarDays className="h-4 w-4" />
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <CalendarDays className="h-3.5 w-3.5" />
                           {new Date(order.order_date).toLocaleDateString(
                             lang === "ar" ? "ar-BH-u-nu-latn" : "en-BH",
                           )}
-                        </span>
-                      </td>
-                      <td className="p-4 whitespace-nowrap">
-                        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-foreground">
-                          {formatArabicOrderStatus(order.status, lang)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-muted-foreground whitespace-nowrap">
-                        {paymentLabel(order.payment_method, lang)}
-                      </td>
-                      <td className="p-4 text-end font-semibold text-foreground whitespace-nowrap font-mono">
+                        </p>
+                      </div>
+                      <p className="font-mono text-sm font-extrabold">
                         {formatMoney(Number(order.total), order.currency || "BHD")}
-                      </td>
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-2.5">
+                      <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold">
+                        {formatArabicOrderStatus(order.status, lang)}
+                      </span>
+                      <span className="truncate text-[11px] text-muted-foreground">
+                        {paymentLabel(order.payment_method, lang)}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[680px] text-sm whitespace-nowrap">
+                  <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
+                    <tr>
+                      <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
+                        {lang === "ar" ? "رقم الطلب" : "Order ID #"}
+                      </th>
+                      <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
+                        {lang === "ar" ? "التاريخ" : "Date"}
+                      </th>
+                      <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
+                        {lang === "ar" ? "الحالة" : "Status"}
+                      </th>
+                      <th className="p-4 text-start font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
+                        {lang === "ar" ? "طريقة الدفع" : "Payment Method"}
+                      </th>
+                      <th className="p-4 text-end font-semibold text-xs uppercase tracking-wider whitespace-nowrap">
+                        {lang === "ar" ? "الإجمالي" : "Total Amount"}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr
+                        key={order.id}
+                        tabIndex={0}
+                        className="cursor-pointer border-t border-border transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
+                        onClick={() =>
+                          navigate({
+                            to: "/admin/b/$slug/orders/$id",
+                            params: { slug, id: order.id },
+                          })
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ")
+                            navigate({
+                              to: "/admin/b/$slug/orders/$id",
+                              params: { slug, id: order.id },
+                            });
+                        }}
+                      >
+                        <td className="p-4 whitespace-nowrap font-mono font-bold">
+                          <Link
+                            to="/admin/b/$slug/orders/$id"
+                            params={{ slug, id: order.id }}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            #{order.invoice_number}
+                          </Link>
+                        </td>
+                        <td className="p-4 text-muted-foreground whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            {new Date(order.order_date).toLocaleDateString(
+                              lang === "ar" ? "ar-BH-u-nu-latn" : "en-BH",
+                            )}
+                          </span>
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-foreground">
+                            {formatArabicOrderStatus(order.status, lang)}
+                          </span>
+                        </td>
+                        <td className="p-4 text-muted-foreground whitespace-nowrap">
+                          {paymentLabel(order.payment_method, lang)}
+                        </td>
+                        <td className="p-4 text-end font-semibold text-foreground whitespace-nowrap font-mono">
+                          {formatMoney(Number(order.total), order.currency || "BHD")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Card>
       </div>

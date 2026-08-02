@@ -38,18 +38,33 @@ import { useProfile, SUPER_ADMIN_EMAIL } from "@/lib/profile-context";
 import { useBrand } from "@/lib/brand-context";
 import type { Profile, UserRole, UserStatus } from "@/lib/profile-context";
 
-export const Route = createFileRoute("/_authenticated/admin/b/$slug/team")({
-  beforeLoad: async ({ params }) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw redirect({ to: "/auth" });
+import { TeamCommandHeader } from "@/components/team/TeamCommandHeader";
+import { TeamScopeSwitcher, type TeamStatusScope } from "@/components/team/TeamScopeSwitcher";
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, status, email")
-      .eq("id", user.id)
-      .maybeSingle();
+export const Route = createFileRoute("/_authenticated/admin/b/$slug/team")({
+  beforeLoad: async ({ context: { queryClient }, params }) => {
+    const user = await queryClient.ensureQueryData({
+      queryKey: ["auth_user"],
+      queryFn: async () => {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) throw redirect({ to: "/auth" });
+        return data.user;
+      },
+      staleTime: 1000 * 60 * 5,
+    });
+
+    const profile = await queryClient.ensureQueryData({
+      queryKey: ["auth_profile_role", user.id],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role, status, email")
+          .eq("id", user.id)
+          .maybeSingle();
+        return data ?? null;
+      },
+      staleTime: 1000 * 60 * 5,
+    });
 
     const role = profile?.role;
     const allowed =
@@ -231,193 +246,207 @@ function TeamManagement() {
     setEditOpen(true);
   };
 
+  const [statusScope, setStatusScope] = useState<TeamStatusScope>("all");
+
   const staff = staffQ.data ?? [];
+  const filteredStaff = staff.filter((m) => {
+    if (statusScope === "active") return m.status === "active";
+    if (statusScope === "inactive") return m.status === "inactive";
+    return true;
+  });
+
+  const scopeCounts = {
+    all: staff.length,
+    active: staff.filter((m) => m.status === "active").length,
+    inactive: staff.filter((m) => m.status === "inactive").length,
+  };
+
   const locale = isAr ? "ar-BH-u-nu-latn" : "en-US";
 
   return (
-    <div
-      className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8 animate-fade-in"
-      dir={isAr ? "rtl" : "ltr"}
-    >
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 dark:from-slate-50 dark:to-slate-300">
-            {isAr ? "إدارة الموظفين" : "Team Management"}
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm max-w-md">
-            {isAr
-              ? "أضف وأدِر حسابات الموظفين. فقط المدراء يمكنهم رؤية هذه الصفحة."
-              : "Add and manage staff accounts. Only admins can view this page."}
-          </p>
-        </div>
-        <Dialog
-          open={addOpen}
-          onOpenChange={(v) => {
-            setAddOpen(v);
-            if (!v) resetForm();
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95 gap-2">
-              <Plus className="h-4 w-4" />
-              {isAr ? "إضافة موظف" : "Add Staff"}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{isAr ? "إضافة موظف جديد" : "Add New Staff Member"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>{t("customers.name")}</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. Sayeed Majeed"
-                />
-              </div>
-              <div>
-                <Label>{t("customers.email")}</Label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="e.g. name@example.com"
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <Label>
-                  {isAr
-                    ? "رقم الهاتف / الواتساب (مطلوب للمناديب)"
-                    : "Phone / WhatsApp (required for couriers)"}
-                </Label>
-                <Input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="e.g. +973 33000000"
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <Label>
-                  {isAr ? "كلمة المرور (للحسابات الجديدة فقط)" : "Password (new accounts only)"}
-                </Label>
-                <Input
-                  type="password"
-                  className="text-start"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder={isAr ? "كلمة مرور مؤقتة" : "Temporary password"}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {isAr
-                    ? "اتركها فارغة إذا كان البريد مرتبطاً بحساب عميل حالي؛ لن تتغير كلمة مروره."
-                    : "Leave blank when the email belongs to an existing customer; their current password will not change."}
-                </p>
-              </div>
-              <div>
-                <Label>{isAr ? "الدور" : "Role"}</Label>
-                <Select
-                  value={form.role}
-                  onValueChange={(v) => setForm({ ...form, role: v as UserRole })}
-                >
-                  <SelectTrigger className="text-start">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="staff">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        {isAr ? "موظف" : "Staff"}
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="courier">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        {isAr ? "مندوب توصيل" : "Courier"}
-                      </div>
-                    </SelectItem>
-                    {isSuperAdmin && (
-                      <SelectItem value="admin">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          {isAr ? "مدير" : "Admin"}
-                        </div>
-                      </SelectItem>
-                    )}
-                    {isSuperAdmin && (
-                      <SelectItem value="brand_admin">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          {isAr ? "مدير علامة تجارية" : "Brand Admin"}
-                        </div>
-                      </SelectItem>
-                    )}
-                    {isSuperAdmin && (
-                      <SelectItem value="super_admin">
-                        <div className="flex items-center gap-2">
-                          <Crown className="h-4 w-4" />
-                          {isAr ? "مدير عام" : "Super Admin"}
-                        </div>
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+    <div className="space-y-3.5">
+      {/* 1. Command Header */}
+      <TeamCommandHeader
+        lang={isAr ? "ar" : "en"}
+        brandName={(isAr ? brand.name_ar : brand.name_en) || brand.name_en || brand.slug}
+        memberCount={staff.length}
+        onAddMember={() => setAddOpen(true)}
+      />
 
-              {form.role === "staff" && (
-                <div className="space-y-2">
-                  <Label>{isAr ? "الصلاحيات" : "Permissions"}</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-secondary/5">
-                    {AVAILABLE_PERMISSIONS.map((p) => {
-                      const checked = form.permissions.includes(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                            onChange={() => {
-                              const newPerms = checked
-                                ? form.permissions.filter((x) => x !== p.id)
-                                : [...form.permissions, p.id];
-                              setForm({ ...form, permissions: newPerms });
-                            }}
-                          />
-                          <span>{isAr ? p.labelAr : p.labelEn}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
+      {/* 2. Scope Switcher */}
+      <TeamScopeSwitcher
+        lang={isAr ? "ar" : "en"}
+        activeScope={statusScope}
+        onScopeChange={(scope) => setStatusScope(scope)}
+        counts={scopeCounts}
+      />
+      <Dialog
+        open={addOpen}
+        onOpenChange={(v) => {
+          setAddOpen(v);
+          if (!v) resetForm();
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button className="shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.01] active:scale-95 gap-2">
+            <Plus className="h-4 w-4" />
+            {isAr ? "إضافة موظف" : "Add Staff"}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isAr ? "إضافة موظف جديد" : "Add New Staff Member"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>{t("customers.name")}</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Sayeed Majeed"
+              />
+            </div>
+            <div>
+              <Label>{t("customers.email")}</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="e.g. name@example.com"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label>
                 {isAr
-                  ? "سيتمكن المستخدم من تسجيل الدخول فوراً. يمكنه تغيير كلمة المرور لاحقاً."
-                  : "The user will be able to sign in immediately. They can change their password later."}
+                  ? "رقم الهاتف / الواتساب (مطلوب للمناديب)"
+                  : "Phone / WhatsApp (required for couriers)"}
+              </Label>
+              <Input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="e.g. +973 33000000"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label>
+                {isAr ? "كلمة المرور (للحسابات الجديدة فقط)" : "Password (new accounts only)"}
+              </Label>
+              <Input
+                type="password"
+                className="text-start"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={isAr ? "كلمة مرور مؤقتة" : "Temporary password"}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isAr
+                  ? "اتركها فارغة إذا كان البريد مرتبطاً بحساب عميل حالي؛ لن تتغير كلمة مروره."
+                  : "Leave blank when the email belongs to an existing customer; their current password will not change."}
               </p>
             </div>
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setAddOpen(false);
-                  resetForm();
-                }}
+            <div>
+              <Label>{isAr ? "الدور" : "Role"}</Label>
+              <Select
+                value={form.role}
+                onValueChange={(v) => setForm({ ...form, role: v as UserRole })}
               >
-                {t("common.cancel")}
-              </Button>
-              <Button onClick={handleAdd}>{t("common.save")}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <SelectTrigger className="text-start">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      {isAr ? "موظف" : "Staff"}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="courier">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      {isAr ? "مندوب توصيل" : "Courier"}
+                    </div>
+                  </SelectItem>
+                  {isSuperAdmin && (
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        {isAr ? "مدير" : "Admin"}
+                      </div>
+                    </SelectItem>
+                  )}
+                  {isSuperAdmin && (
+                    <SelectItem value="brand_admin">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        {isAr ? "مدير علامة تجارية" : "Brand Admin"}
+                      </div>
+                    </SelectItem>
+                  )}
+                  {isSuperAdmin && (
+                    <SelectItem value="super_admin">
+                      <div className="flex items-center gap-2">
+                        <Crown className="h-4 w-4" />
+                        {isAr ? "مدير عام" : "Super Admin"}
+                      </div>
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.role === "staff" && (
+              <div className="space-y-2">
+                <Label>{isAr ? "الصلاحيات" : "Permissions"}</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-lg border border-border bg-secondary/5">
+                  {AVAILABLE_PERMISSIONS.map((p) => {
+                    const checked = form.permissions.includes(p.id);
+                    return (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                          onChange={() => {
+                            const newPerms = checked
+                              ? form.permissions.filter((x) => x !== p.id)
+                              : [...form.permissions, p.id];
+                            setForm({ ...form, permissions: newPerms });
+                          }}
+                        />
+                        <span>{isAr ? p.labelAr : p.labelEn}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              {isAr
+                ? "سيتمكن المستخدم من تسجيل الدخول فوراً. يمكنه تغيير كلمة المرور لاحقاً."
+                : "The user will be able to sign in immediately. They can change their password later."}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setAddOpen(false);
+                resetForm();
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleAdd}>{t("common.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {staff.length === 0 ? (
         <Card className="p-16 text-center border-border/60 shadow-lg rounded-2xl bg-card/40 backdrop-blur-sm">
@@ -450,7 +479,7 @@ function TeamManagement() {
                 </tr>
               </thead>
               <tbody>
-                {staff.map((member) => (
+                {filteredStaff.map((member) => (
                   <tr key={member.id} className="border-t border-border">
                     <td className="p-4 font-medium">{member.name || member.email.split("@")[0]}</td>
                     <td className="hidden p-4 text-muted-foreground md:table-cell" dir="ltr">

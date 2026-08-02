@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker";
 import { useI18n, useT } from "@/lib/i18n";
 import { fetchReportingCustomers } from "@/lib/reporting.functions";
 import { DatePickerWithRange } from "@/components/reports/date-range-picker";
+import { ReportsToolbar } from "@/components/reports/ReportsToolbar";
 import { KpiCard } from "@/components/reports/kpi-card";
 import { formatMoney } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,19 +88,13 @@ function ReportsCustomers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-background p-4 rounded-lg border">
-        <DatePickerWithRange date={date} setDate={setDate} />
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="historical-customers"
-            checked={includeHistorical}
-            onCheckedChange={setIncludeHistorical}
-          />
-          <Label htmlFor="historical-customers">
-            {lang === "ar" ? "تضمين الأرشيف" : "Include archived"}
-          </Label>
-        </div>
-      </div>
+      <ReportsToolbar
+        lang={lang === "ar" ? "ar" : "en"}
+        date={date}
+        setDate={setDate}
+        includeHistorical={includeHistorical}
+        setIncludeHistorical={setIncludeHistorical}
+      />
 
       {isLoading ? (
         <Card className="animate-pulse">
@@ -190,32 +185,54 @@ function ReportsCustomers() {
               </CardHeader>
               <CardContent>
                 {customersData.top_customers && customersData.top_customers.length > 0 ? (
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{lang === "ar" ? "العميل" : "Customer"}</TableHead>
-                          <TableHead className="text-center">
-                            {lang === "ar" ? "الطلبات" : "Orders"}
-                          </TableHead>
-                          <TableHead className="text-right">
-                            {lang === "ar" ? "إجمالي الإنفاق" : "Total Spent"}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customersData.top_customers.map((c: any, idx: number) => (
-                          <TableRow key={idx}>
-                            <TableCell className="font-medium">{c.customer_name}</TableCell>
-                            <TableCell className="text-center">{c.paid_order_count}</TableCell>
-                            <TableCell className="text-right">
+                  <>
+                    <div className="space-y-2 sm:hidden">
+                      {customersData.top_customers.map((c: any, idx: number) => (
+                        <article
+                          key={`${c.customer_name}-${idx}`}
+                          className="rounded-xl border border-border/60 bg-background/70 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="min-w-0 truncate text-sm font-bold">
+                              {c.customer_name}
+                            </h3>
+                            <strong className="shrink-0 font-mono text-sm">
                               {formatMoney(c.total_pov, c.currency, lang)}
-                            </TableCell>
+                            </strong>
+                          </div>
+                          <p className="mt-2 text-[11px] text-muted-foreground">
+                            {c.paid_order_count} {lang === "ar" ? "طلبات مدفوعة" : "paid orders"}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                    <div className="hidden rounded-md border sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{lang === "ar" ? "العميل" : "Customer"}</TableHead>
+                            <TableHead className="text-center">
+                              {lang === "ar" ? "الطلبات" : "Orders"}
+                            </TableHead>
+                            <TableHead className="text-right">
+                              {lang === "ar" ? "إجمالي الإنفاق" : "Total Spent"}
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {customersData.top_customers.map((c: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{c.customer_name}</TableCell>
+                              <TableCell className="text-center">{c.paid_order_count}</TableCell>
+                              <TableCell className="text-right">
+                                {formatMoney(c.total_pov, c.currency, lang)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center p-8 border rounded-lg bg-muted/20">
                     <p className="text-muted-foreground">

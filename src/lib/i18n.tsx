@@ -730,11 +730,7 @@ function readInitial(): Lang {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("ar");
-
-  useEffect(() => {
-    setLangState(readInitial());
-  }, []);
+  const [lang, setLangState] = useState<Lang>(readInitial);
 
   useEffect(() => {
     const dir = lang === "ar" ? "rtl" : "ltr";

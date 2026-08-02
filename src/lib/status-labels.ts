@@ -15,12 +15,14 @@ export const FULFILLMENT_STATUS_MAP: Record<string, StatusDefinition> = {
   NEEDS_PACKING: {
     ar: "بحاجة للتعبئة",
     en: "Needs Packing",
-    badgeClasses: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
+    badgeClasses:
+      "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
   },
   ASSIGNED: {
     ar: "تم التعيين للمندوب (بانتظار البيك اب)",
     en: "Assigned (Awaiting Pickup)",
-    badgeClasses: "bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300",
+    badgeClasses:
+      "bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300",
   },
   SHIPPED: {
     ar: "خرج للتوصيل",
@@ -40,47 +42,56 @@ export const FULFILLMENT_STATUS_MAP: Record<string, StatusDefinition> = {
   READY_FOR_PICKUP: {
     ar: "جاهز للاستلام",
     en: "Ready for Pickup",
-    badgeClasses: "bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300",
+    badgeClasses:
+      "bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300",
   },
   DELIVERED: {
     ar: "تم التوصيل",
     en: "Delivered",
-    badgeClasses: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+    badgeClasses:
+      "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   COMPLETED: {
     ar: "تم التوصيل",
     en: "Completed",
-    badgeClasses: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+    badgeClasses:
+      "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   PICKED_UP: {
     ar: "تم الاستلام من المحل",
     en: "Picked Up",
-    badgeClasses: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+    badgeClasses:
+      "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   ON_HOLD: {
     ar: "قيد الانتظار",
     en: "On Hold",
-    badgeClasses: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200",
+    badgeClasses:
+      "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200",
   },
   CANCELLED: {
     ar: "ملغى",
     en: "Cancelled",
-    badgeClasses: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
+    badgeClasses:
+      "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
   },
   CANCELED: {
     ar: "ملغى",
     en: "Cancelled",
-    badgeClasses: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
+    badgeClasses:
+      "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
   },
   RETURNED: {
     ar: "مرتجع",
     en: "Returned",
-    badgeClasses: "bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300",
+    badgeClasses:
+      "bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300",
   },
   FAILED: {
     ar: "تعذر التوصيل",
     en: "Delivery Failed",
-    badgeClasses: "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
+    badgeClasses:
+      "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
   },
 };
 
@@ -106,10 +117,7 @@ export const FULFILLMENT_METHOD_MAP: Record<string, StatusDefinition> = {
 /**
  * Returns localized label for fulfillment status with fallback handling.
  */
-export function getFulfillmentLabel(
-  status: string | null | undefined,
-  lang: Lang = "ar",
-): string {
+export function getFulfillmentLabel(status: string | null | undefined, lang: Lang = "ar"): string {
   if (!status) return lang === "ar" ? "قيد الانتظار" : "On Hold";
   const normalized = String(status).trim().toUpperCase();
   const def = FULFILLMENT_STATUS_MAP[normalized];
@@ -122,10 +130,7 @@ export function getFulfillmentLabel(
 /**
  * Returns localized label for order status with fallback handling.
  */
-export function getOrderStatusLabel(
-  status: string | null | undefined,
-  lang: Lang = "ar",
-): string {
+export function getOrderStatusLabel(status: string | null | undefined, lang: Lang = "ar"): string {
   if (!status) return lang === "ar" ? "مسودة" : "Draft";
   const normalized = String(status).trim().toLowerCase();
   const def = ORDER_STATUS_MAP[normalized];

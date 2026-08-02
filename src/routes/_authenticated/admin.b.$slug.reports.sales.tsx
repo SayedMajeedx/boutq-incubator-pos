@@ -6,6 +6,7 @@ import { DateRange } from "react-day-picker";
 import { useI18n } from "@/lib/i18n";
 import { fetchReportingSales, ReportInterval } from "@/lib/reporting.functions";
 import { DatePickerWithRange } from "@/components/reports/date-range-picker";
+import { ReportsToolbar } from "@/components/reports/ReportsToolbar";
 import { KpiCard } from "@/components/reports/kpi-card";
 import { formatMoney } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
@@ -89,32 +90,15 @@ function ReportsSales() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <DatePickerWithRange date={date} setDate={setDate} />
-          <Select value={interval} onValueChange={(value) => setInterval(value as ReportInterval)}>
-            <SelectTrigger className="h-11 w-full rounded-xl bg-white sm:w-[170px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">{lang === "ar" ? "يومي" : "Daily"}</SelectItem>
-              <SelectItem value="week">{lang === "ar" ? "أسبوعي" : "Weekly"}</SelectItem>
-              <SelectItem value="month">{lang === "ar" ? "شهري" : "Monthly"}</SelectItem>
-              <SelectItem value="year">{lang === "ar" ? "سنوي" : "Yearly"}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl bg-[#faf7f6] px-3 py-2">
-          <Switch
-            id="historical-sales"
-            checked={includeHistorical}
-            onCheckedChange={setIncludeHistorical}
-          />
-          <Label htmlFor="historical-sales" className="text-sm">
-            {lang === "ar" ? "تضمين الطلبات المؤرشفة" : "Include archived orders"}
-          </Label>
-        </div>
-      </div>
+      <ReportsToolbar
+        lang={lang === "ar" ? "ar" : "en"}
+        date={date}
+        setDate={setDate}
+        interval={interval}
+        setInterval={setInterval}
+        includeHistorical={includeHistorical}
+        setIncludeHistorical={setIncludeHistorical}
+      />
 
       {query.isLoading ? (
         <ReportSkeleton />

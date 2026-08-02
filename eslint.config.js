@@ -14,6 +14,11 @@ export default tseslint.config(
       ".wrangler",
       "src/routeTree.gen.ts",
       "worker-configuration.d.ts",
+      ".codex-*/**",
+      "**/.*codex*/**",
+      ".temp/**",
+      "supabase/.temp/**",
+      "node_modules/**",
     ],
   },
   {
@@ -41,7 +46,9 @@ export default tseslint.config(
           ],
         },
       ],
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // Fast Refresh export shape is development-only guidance. The project
+      // intentionally colocates context hooks and UI variants with providers.
+      "react-refresh/only-export-components": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/no-explicit-any": "off",
     },

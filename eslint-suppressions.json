@@ -1,46 +1,10 @@
 {
-  "src/components/activity-log-list.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/components/app-shell.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
   "src/components/barcode-scanner.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    },
     "no-control-regex": {
       "count": 1
     }
   },
-  "src/components/bilingual-field.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/components/courier/CourierWhatsAppModal.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/components/customer-address-manager.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/components/passkey-settings.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/components/storefront-analytics.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    },
     "@typescript-eslint/no-unused-expressions": {
       "count": 1
     },
@@ -51,75 +15,19 @@
       "count": 1
     }
   },
-  "src/components/storefront/product-card.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/components/storefront/product-grid.tsx": {
     "no-empty": {
       "count": 2
     }
   },
-  "src/components/subscription-card.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/components/support-access-card.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/hooks/use-realtime-invalidate.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/integrations/supabase/auth-middleware.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 16
-    },
     "no-empty": {
       "count": 9
     }
   },
   "src/integrations/supabase/client.server.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    },
     "no-empty": {
       "count": 2
-    }
-  },
-  "src/lib/activity-log.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/lib/auth-errors.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/lib/benefit-receipt-cleanup.server.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    }
-  },
-  "src/lib/benefit-receipt.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    }
-  },
-  "src/lib/courier-whatsapp.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "src/lib/customer-importer.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
     }
   },
   "src/lib/download-invoice-pdf.ts": {
@@ -127,77 +35,29 @@
       "count": 1
     }
   },
-  "src/lib/generate-variants.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/lib/impersonation.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    },
     "no-empty": {
       "count": 2
     }
   },
-  "src/lib/impersonation.server.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/lib/instagram-ai-importer.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 12
-    },
     "no-misleading-character-class": {
       "count": 8
-    },
-    "prefer-const": {
-      "count": 1
-    }
-  },
-  "src/lib/media-delivery.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
     }
   },
   "src/lib/onboarding.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    },
     "no-empty": {
       "count": 3
     }
   },
-  "src/lib/order-importer.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "src/lib/public-invoice.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
   "src/lib/r2-stream.server.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 9
-    },
     "no-empty": {
       "count": 1
     }
   },
   "src/lib/r2-upload.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 8
-    },
     "no-empty": {
       "count": 4
-    }
-  },
-  "src/lib/scan-receipt.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
     }
   },
   "src/lib/seo.ts": {
@@ -205,254 +65,42 @@
       "count": 1
     }
   },
-  "src/lib/storefront-analytics.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/lib/storefront-context.tsx": {
-    "no-empty": {
-      "count": 4
-    }
-  },
-  "src/lib/translate.functions.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/lib/universal-importer.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    },
-    "prefer-const": {
-      "count": 1
-    }
-  },
-  "src/routes/$slug.$category.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 17
-    }
-  },
   "src/routes/$slug.account.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    },
     "react-hooks/rules-of-hooks": {
       "count": 1
     }
   },
-  "src/routes/$slug.auth.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/routes/$slug.checkout.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 14
-    }
-  },
-  "src/routes/$slug.index.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 9
-    }
-  },
   "src/routes/$slug.product.$id.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 7
-    },
     "no-empty": {
       "count": 1
     }
   },
   "src/routes/$slug.route.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 51
-    },
     "no-empty": {
       "count": 2
     }
   },
-  "src/routes/$slug.search.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "src/routes/_authenticated/admin.b.$slug.campaigns.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    },
     "no-empty": {
       "count": 1
     }
   },
-  "src/routes/_authenticated/admin.b.$slug.categories.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 8
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.communications.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 7
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.customers.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.dashboard.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 10
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.discounts.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.expenses.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 14
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.integrations.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 5
-    }
-  },
   "src/routes/_authenticated/admin.b.$slug.inventory.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 20
-    },
     "no-control-regex": {
       "count": 1
     }
   },
   "src/routes/_authenticated/admin.b.$slug.orders.$id.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 96
-    },
     "no-control-regex": {
       "count": 1
     }
   },
-  "src/routes/_authenticated/admin.b.$slug.orders.index.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 50
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.pages.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.route.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.settings.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 55
-    }
-  },
-  "src/routes/_authenticated/admin.b.$slug.team.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 8
-    }
-  },
-  "src/routes/_authenticated/admin.brands.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 8
-    }
-  },
-  "src/routes/_authenticated/admin.super.requests.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    }
-  },
-  "src/routes/_authenticated/admin.super.settings.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/routes/api.orders.status.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/routes/api.public.payments.create-tap-charge.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/routes/api.public.payments.tap-redirect.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "src/routes/api.public.webhooks.tap.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "src/routes/auth.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 4
-    }
-  },
-  "src/routes/brands.$brandId.$kind.$filename.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/routes/forgot-password.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/routes/index.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "src/routes/invoice.$id.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    }
-  },
-  "src/routes/onboard.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 7
-    }
-  },
-  "src/routes/platform.$filename.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/routes/reset-password.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "src/vinxi-http.d.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
   "supabase/functions/send-order-email/index.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 12
-    },
     "prefer-const": {
       "count": 2
     }
   },
   "supabase/functions/user-management/index.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 12
-    },
     "no-empty": {
       "count": 2
     }
